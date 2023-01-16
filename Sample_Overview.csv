@@ -1,0 +1,15 @@
+Sample ID,Age,Mean bitterness value,Bitterness grouping,Categorical grouping
+T_0.2a,0.2,0.7,Threshold,Non-bitter
+T_0.2b,0.2,ND,Threshold,Non-bitter
+T_0.2c,0.2,ND,Threshold,Non-bitter
+T_0.2d,0.2,ND,Threshold,Non-bitter
+L_3.3,3.3,1.2,Low,Non-bitter
+L_2.9,2.9,1.4,Low,Non-bitter
+L_6.0,6,1.4,Low,Non-bitter
+M_7.3,7.3,2.1,Moderate,Bitter
+M_6.2,6.2,2.1,Moderate,Bitter
+M_5.6,5.6,2.4,Moderate,Bitter
+E_7.2,7.2,2.9,Extreme,Bitter
+E_8.7a,8.7,2.9,Extreme,Bitter
+E_5.7,5.7,3,Extreme,Bitter
+E_8.7b,8.7,3.4,Extreme,Bitter
