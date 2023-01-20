@@ -5,8 +5,7 @@ options( digits = 5 )
 
 
 
-####Install and load required packages#######
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+####Install and load required packages#######------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 install.packages("matrixTests")
 install.packages("gridExtra")
 install.packages("gtools")
@@ -14,6 +13,7 @@ install.packages("Matrix")
 install.packages("ggplot")
 install.packages("dplyr")
 install.packages("stringr")
+
 library(gtools)
 library(matrixTests)
 library(dplyr)
@@ -27,13 +27,12 @@ library(stringr)
 
 
 
-####Import raw data, creates important datafROMes(samdf = sample information, lit_ref = literature reference database, datarn = insturment data with new names) and renames columns####
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+####Import raw data, creates important data frames (samdf = sample information, lit_ref = literature reference database, datarn = instrument data with new names) and renames columns####------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Imports literature reference database
 lit_ref <- read.csv("Supplemental_Information_CSV_Database.csv", header = TRUE, stringsAsFactors = FALSE, fileEncoding = "latin1", comment.char = '#')	
 
 #Imports peptide data list
-data1 <- read.table("Kuhfeld_Bitter_Peptide_Reprocess-(1)_PeptideGroups.txt", header = TRUE, stringsAsFactors = FALSE, fileEncoding = "latin1",)
+data1 <- read.table("Kuhfeld_Bitter_Peptide_Reprocess-(1)_PeptideGroups.txt", header = TRUE, stringsAsFactors = FALSE, fileEncoding = "latin1")
 
 #imports file name list and extracts sample name, ID, and grouping
 sample_names_df <- read.table("Kuhfeld_Bitter_Peptide_Reprocess-(1)_InputFiles.txt", header = TRUE, stringsAsFactors = FALSE) #input files line 14 and 15 column file name was manually edited from "_E_8_7_a_" & "_E_8_7_b_" to "_E_8_7a_" & "_E_8_7b_" to be consistent with the formating for the threshold samples
@@ -42,13 +41,13 @@ sample_names_ext_rename <- str_replace(sample_names_ext_name, "(?<=[0-9])[_]", "
 sample_names_df$sample_names <-sample_names_ext_rename #creates new column with extracted renamed names
 sample_names_ext_ID <-sample_names_df$File.ID #creates list with file IDs
 
-#imports sample overview to bring in age, Mean bitterness intensity = MBI, bitterness grouping = bitterness and catagorical grouping = grouping
+#imports sample overview to bring in age, Mean bitterness intensity = MBI, bitterness grouping = bitterness and categorical grouping = grouping
 samdf_import <- read.csv("Sample_Overview.csv", header = TRUE, stringsAsFactors = FALSE)
 
 #for loop that replaces the non-detect values in MBI with LOQ (0.5)
 for (i in 1:nrow(samdf_import)) {
   if (samdf_import[i,'Mean.bitterness.value'] == "ND") {
-    samdf_import[i,'Mean.bitterness.value'] = 0.5} # the LOQ of 0.5 is subsituted for non-detected(ND) results to add in correlation analysis  
+    samdf_import[i,'Mean.bitterness.value'] = 0.5} # the LOQ of 0.5 is substituted for non-detected(ND) results to add in correlation analysis  
 }
 
 #renames columns and turns MBI to numeric
@@ -66,10 +65,10 @@ colnames(samdf)[colnames(samdf) == 'File.ID'] <- 'sample_names_ext_ID'
 
 #shortens names of columns in data1 (instrument results) dataframe
 data1_names <-colnames(data1)
-data1_names <- str_replace(data1_names, "Abundances.Normalized", "ANI") #replaces abundance normalized imputed data with abrevation "ANI"
-data1_names <- str_replace(data1_names, "Abundances.Origin", "ADI") #replaces abundance origin with abrevation "ADI" for detected or imputed
-data1_names <- str_replace(data1_names, "Abundance", "A") #replaces abundance  with abrevation "A" for data with out normilization or imputation
-data1_names <- str_replace(data1_names, ".Sample.....?.?.?.?.?.?", "") #removes sample and grouping infromation
+data1_names <- str_replace(data1_names, "Abundances.Normalized", "ANI") #replaces abundance normalized imputed data with abbreviation "ANI"
+data1_names <- str_replace(data1_names, "Abundances.Origin", "ADI") #replaces abundance origin with abbreviation "ADI" for detected or imputed
+data1_names <- str_replace(data1_names, "Abundance", "A") #replaces abundance  with abbreviation "A" for data with out normalization or imputation
+data1_names <- str_replace(data1_names, ".Sample.....?.?.?.?.?.?", "") #removes sample and grouping information
 
 #loop that replaces file id ie. "F1" with sample name ie. "T_0.2a"
 data1_names_new <- list()
@@ -87,22 +86,21 @@ for (i in data1_names)  {
   }
 }
 
-#creates new dataframe datarn (insturment data re-named) and renames columns with shortend sample names
+#creates new dataframe datarn (instrument data re-named) and renames columns with shortend sample names
 datarn <- data1
 colnames(datarn) <- data1_names_new
 
 
 
-####data cruching#### 
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#counts the number of real Mass spec detections in the samples where "Det" = detected value and "Imp" = imputed and saves as column in df
+####data crunching####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#counts the number of real Mass spec detection in the samples where "Det" = detected value and "Imp" = imputed and saves as column in df
 datarn$count <- NA
 for (i in 1:nrow(datarn)){
   datarn[i,'count'] <- (sum(c(datarn[i,grep("^ADI.",data1_names_new)] == "Det")))
 }
 
 ####Q value Function####
-#uses ney 1979 formula for determing hydrophobicity or Q-value of a peptide based on free energy transfer of amino acids which are the lines below assigning amino acids there energy transfer value
+#uses ney 1979 formula for determining hydrophobicity or Q-value of a peptide based on free energy transfer of amino acids which are the lines below assigning amino acids there energy transfer value
 amino_acids <- rbind(
   'Q' = -100,
   'N' = -10,
@@ -126,7 +124,7 @@ amino_acids <- rbind(
   'W' = 3000)
 amino_acids <- amino_acids[sort(unique(rownames(amino_acids))), ]
 
-#loop tha calculates Q-Value, 
+#loop that calculates Q-Value, 
   #creates a vector with count of each amino acid in the peptide, 
   #then multiplies this by the energy value of each peptide, 
   #then sums these values
@@ -173,10 +171,9 @@ datarn$logpvalue <- as.numeric(datarn$logpvalue, na.rm =TRUE)
 
 
 
-####converts casein to greek symbol and renames columns#####
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+####converts casein to Greek symbol and renames columns#####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 colnames(datarn)[colnames(datarn) == 'Master.Protein.Accessions'] <- 'Protein' #renames column for easier reference
-#references unicode for alpha, beta, and kappa greek symbols
+#references Unicode for alpha, beta, and kappa Greek symbols
 Beta<-"\U03B2"
 BetaA1<- str_c(Beta,"A1")
 BetaA2<- str_c(Beta, "A2")
@@ -185,15 +182,22 @@ Alphas2<-paste0("\U03B1","s2")
 Kappa<-paste("\U03BA")
 
 #regular expressions and for loop to deal duplicate data due to beta casein P02666 genetic varriant A1 & A2
-  datarn$Positions.in.Proteins <-gsub("; P02666A2[ ][//[].....?.?.?.?.?","",as.character(datarn$Positions.in.Proteins)) # regular expresion to removes second instance of beta casein in position in protein column
+datarn$Positions.in.Proteins <-gsub("; P02666A2[ ][//[].....?.?.?.?.?","",as.character(datarn$Positions.in.Proteins)) # regular expresion to removes second instance of beta casein in position in protein column
 
-#loop that labels any beta casein without overlap with the genetic varriant site 67 as just beta casein (P02666) in both protein and position in protein columns.
+  
+#joins sequence and modification columns and checks for duplicates
+datarn$combined_sequence <-paste0(datarn$Sequence,datarn$Modifications) #this combines the sequence ie. "APKHKEMPFPKYP" with modification "1xOxidation [M7]" to create new column combined_sequence ie"APKHKEMPFPKYP1xOxidation [M7]"
+  
+#loop that labels any beta casein without overlap with the genetic variant site 67 as just beta casein (P02666) in both protein and position in protein columns.
   for (i in 1:nrow(datarn))  {
   temp_pnp <-unlist(strsplit (x=datarn[i,'Positions.in.Proteins'], split = " "))
   if (datarn[i,'Protein'] == "P02666A1; P02666A2")
     {
     datarn[i,'Positions.in.Proteins'] <-paste("P02666",temp_pnp[2])
     datarn[i,'Protein'] <- "P02666"
+  if (datarn[i,"Modifications"] != ""){
+    datarn[i,"Positions.in.Proteins"] <- paste0(datarn[i,"Positions.in.Proteins"],"*")    
+    }
     }
 }
 
@@ -215,14 +219,13 @@ datarn$Protein[datarn$Protein == "P02668"] <- Kappa
 
 
 
-####Filters out data based on count, molecular weight and Q-value####
-  #to reduce possible bitter peptide candidates to only those peptides with enough instrument data and literature based molecular weight and Q-value selction criter
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#number of rows or orginal data set pre-filter
+####Filters out data based on count, molecular weight and Q-value####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#to reduce possible bitter peptide candidates to only those peptides with enough instrument data and literature based molecular weight and Q-value selction criter
+#number of rows or original data set pre-filter
 nrow(datarn)
       #[1] 2100
 
-#filters for count >=4 (only includes peptides with atleast four instrement responces) creates new data frame called datamfc (re-named, filtered, count)
+#filters for count >=4 (only includes peptides with at least four instrument responses) creates new data frame called datarnfc (re-named, filtered, count)
 datarnfc <- data.frame(subset(datarn, datarn$count >= 4))
 nrow(datarnfc)
       #[1] 1140
@@ -235,7 +238,7 @@ nrow(datafcmw)
 #filters for Q-Value >=1200  creates new data frame called data_filtered (filtered, count(>4), molecular weight (<=3000), Q-Value (>=1200))
 data_filtered <- data.frame(subset(datafcmw, datafcmw$Q_value >= 1200))
 nrow(data_filtered)
-      #[1] 872
+        #[1] 872
 
 #joins sequence and modification columns and checks for duplicates
 data_filtered$combined_sequence <-paste0(data_filtered$Sequence,data_filtered$Modifications) #this combines the sequence ie. "APKHKEMPFPKYP" with modification "1xOxidation [M7]" to create new column combined_sequence ie"APKHKEMPFPKYP1xOxidation [M7]"
@@ -248,28 +251,27 @@ nrow(data_filtered) == n_distinct(data_filtered$combined_sequence)
 
 
 
-####Calculates linear correlations####
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+####Calculates linear correlations####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 cor.results_A <- c()
 cor.results_B <- c()
 sample_list_ANI <-paste0("ANI.",samdf$sample_names) #list of sample names used in correlation
-#loop that calculates linear regression of insturment inensity to age and bitterness, generates plots for each pepetide
+#loop that calculates linear regression of instrument intensity to age and bitterness, generates plots for each peptide
 pdf("Bar,box, and scatter plot of peptides abudance to cheese bitterness.pdf",height=8,width=12)
 par(mfrow=c(2,2))
 for (i in 1:nrow(data_filtered)) {
   data_cor <- data.frame(b=samdf$MBI,age=samdf$age,grp=factor(samdf$grouping,levels=c("Threshold", "Low", "Moderate", "Extreme")),a=c(unlist(data_filtered[i,sample_list_ANI])) ) #creates internal dataframe, groups based on bitterness
-  cor_B <- cor(data_cor[,c("a","b")])[2,1] #corelates instrumental data to bitteress
+  cor_B <- cor(data_cor[,c("a","b")])[2,1] #correlates instrumental data to bitterness
   cor.results_B <-rbind(cor.results_B,c(data_filtered[i,1],cor_B)) #saves data from above
-  cor_A <- cor(data_cor[,c("a","age")])[2,1] #corelates instrumental data to age
+  cor_A <- cor(data_cor[,c("a","age")])[2,1] #correlates instrumental data to age
   cor.results_A <-rbind(cor.results_A,c(data_filtered[i,1],cor_A)) #saves data from above
-  boxplot(a~grp,data=data_cor,main=paste(data_filtered[i,'combined_sequence'],"SMD:",data_filtered[i,'stand_diff_mean']),xlab="bitterness grouping",ylab="Relative abundance") #generate box plots based on bitterness grouping for each pepetide
+  boxplot(a~grp,data=data_cor,main=paste(data_filtered[i,'combined_sequence'],"SMD:",data_filtered[i,'stand_diff_mean']),xlab="bitterness grouping",ylab="Relative abundance") #generate box plots based on bitterness grouping for each peptide
   dat <- matrix(data_filtered[i,sample_list_ANI],1,14) #creates internal matrix for bar plot
   colnames(dat) <- sample_names_ext_rename 
   barplot( dat, main="Relative abundance bar plot", xlab="Sample ID" , ylab="Relative abundance", cex.names=.5) #generates bar plot showing relative abundance for each sample
-  plot(samdf$age,data_filtered[i,sample_list_ANI],xlab="Cheese Age (years)",ylab="Relative abundance",main=paste("Relative abundance vs. cheese age","corr=",round(cor_A,3))) #creates scrater plot with correlation age of relative abundance to age
+  plot(samdf$age,data_filtered[i,sample_list_ANI],xlab="Cheese Age (years)",ylab="Relative abundance",main=paste("Relative abundance vs. cheese age","corr=",round(cor_A,3))) #creates scratter plot with correlation age of relative abundance to age
   lm_A <- lm(a ~ age,data=data_cor)
-  abline(lm_A,)
-  plot(samdf$MBI,data_filtered[i,sample_list_ANI],xlab="Mean bitterness score",ylab="Relative abundance",main=paste("Relative abundance vs. cheese bitterness","corr=",round(cor_B,3))) #creates scrater plot with correlation age of relative abundance to bitterness
+  abline(lm_A)
+  plot(samdf$MBI,data_filtered[i,sample_list_ANI],xlab="Mean bitterness score",ylab="Relative abundance",main=paste("Relative abundance vs. cheese bitterness","corr=",round(cor_B,3))) #creates scatter plot with correlation age of relative abundance to bitterness
   lm_B <- lm(a ~ b,data=data_cor)
   abline(lm_B)
 }
@@ -278,8 +280,7 @@ dev.off()
 data_filtered$Corr_age<-as.numeric(cor.results_A[,2])
 data_filtered$Corr_bitter<-as.numeric(cor.results_B[,2])
 
-####compares linear relationship of age and bitterness to peptide abundance####
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+####compares linear relationship of age and bitterness to peptide abundance####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #age and bitterness are highly correlated as seen below
 cor_age=c(unlist(data_filtered[ ,'Corr_age']))
 cor_age=as.numeric(cor_age)
@@ -306,30 +307,27 @@ cor(cor_age,cor_bitter)
 
 
 
-#####generates bitter peptide canadites list####
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#####generates bitter peptide candidates list####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #removes bulky extra columns
 A_sample_list <-paste0("A.",samdf$sample_names)
-data_filtered[A_sample_list] <-NULL#removes abundance  with abrevation "A" for data with out normilization or imputation
+data_filtered[A_sample_list] <-NULL#removes abundance  with abbreviation "A" for data with out normalization or imputation
 ADI_sample_list <-paste0("ADI.",samdf$sample_names)
-data_filtered[ADI_sample_list] <-NULL#removes abundance origin with abrevation "ADI" for detected or imputed
+data_filtered[ADI_sample_list] <-NULL#removes abundance origin with abbreviation "ADI" for detected or imputed
 ANI_sample_list <-paste0("ANI.",samdf$sample_names)
-data_filtered[ANI_sample_list] <-NULL#removes abundance normalized imputed data with abrevation "ANI"
+#data_filtered[ANI_sample_list] <-NULL#removes abundance normalized imputed data with abbreviation "ANI"
 data_filtered["Sequence"] <-NULL
 data_filtered["Protein"] <-NULL
 data_filtered["Peptide.Groups.Peptide.Group.ID"] <-NULL
 data_filtered["Modifications"] <-NULL
-data_filtered["logpvalue"] <-NULL
-data_filtered["logfoldchange"] <-NULL
 data_filtered["Quan.Info"] <-NULL
 
 #orders peptide based on rank average meam of stand diff mean and cor to bitter
-data_filtered <- data_filtered[order(data_filtered$stand_diff_mean, decreasing = TRUE),] #oreders based on standard mean difference, largest value = 1
+data_filtered <- data_filtered[order(data_filtered$stand_diff_mean, decreasing = TRUE),] #orders based on standard mean difference, largest value = 1
 data_filtered$SMD_order <- order(data_filtered$stand_diff_mean, decreasing = TRUE) #saved the order from above to new column
-data_filtered <-  data_filtered[order(data_filtered$Corr_bitter, decreasing = TRUE),] #oreders based on bitterness correlation, largest value = 1
+data_filtered <-  data_filtered[order(data_filtered$Corr_bitter, decreasing = TRUE),] #orders based on bitterness correlation, largest value = 1
 data_filtered$Cor_order <- order(data_filtered$Corr_bitter, decreasing = TRUE) #saved the order from above to new column
 
-#generates a new column called ROM for the rank order mean which is the average rank order of both standard mean difference and bitterness correlatio
+#generates a new column called ROM for the rank order mean which is the average rank order of both standard mean difference and bitterness correlation
 data_filtered$ROM <-cbind((data_filtered$SMD_order + data_filtered$Cor_order)/2)
 
 #re-orders data based on rank order mean and generates new column
@@ -340,10 +338,10 @@ data_filtered$ROM_order <- order(data_filtered$ROM, decreasing = FALSE)
 #matches peptide list against literature reference database
 colnames(lit_ref)[colnames(lit_ref) == 'Peptide.sequence'] <- 'combined_sequence' #renames so columns share names accross dataframes
 nrow(lit_ref)
-    #[1] 235, number of peptides in literature refernece database
+    #[1] 235, number of peptides in literature reference database
 lit_ref_short <- subset(lit_ref, select = c(combined_sequence,Groups,Bitterness.Threshold.value..umol.L., Mean.Bitterness.Intensity..1.15.)) #creates dataframe with only important information to merge with data_filtered
 
-#generates a final dataframe which is the merged dataframe of filtered and short literature reference, ordered by top rand order mean first (most likely bitter peptide candidates at the top)
+#generates a final data frame which is the merged data frame of filtered and short literature reference, ordered by top rand order mean first (most likely bitter peptide candidates at the top)
 data_filtered_final <-left_join(data_filtered, lit_ref_short, by = "combined_sequence", copy = FALSE)
 data_filtered_final <- data_filtered_final[,c("combined_sequence","Positions.in.Proteins","ROM_order","ROM","SMD_order","stand_diff_mean","Cor_order","Corr_bitter","diff_means","pvalue","mean_NB","mean_B","sd_NB","sd_B","pooled_sd",
 "foldchange","Corr_age","Theo.MHplus.in.Da","Sequence.Length","Top.Apex.RT.in.min","Groups","Bitterness.Threshold.value..umol.L.","Mean.Bitterness.Intensity..1.15.")]
@@ -355,22 +353,171 @@ nrow(lit_ref_final)
 
 
 
-####Creates data frame for export####
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+####Creates data frame for export####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 write.csv(data_filtered_final, "data_filtered_final.csv")
 write.csv(lit_ref_final, "lit_ref_final.csv")
 
-
-
-
-
-# pruchased on the list YPFPGPIHN[S], YPFPGPIHNS,PFPGPIHNS
-# RINKKIEKF	11.8 out of 15 on MBI scale in wrong peptie gourp
-
 options(scipen = -1, digits = 2); View(data_filtered_final)
 
+####short list of bitter peptide candidates####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+top_12 <- head(data_filtered, n=12) #selects top 12 peptides based on rank order mean identified as bitter peptide candidates
+top_12["Theo.MHplus.in.Da"] <-NULL
+top_12["Sequence.Length"] <-NULL
+top_12["Theo.MHplus.in.Da"] <-NULL
+top_12["Top.Apex.RT.in.min"] <-NULL
+top_12["count"] <-NULL
+top_12["Q_value"] <-NULL
+top_12["diff_means"] <-NULL
+top_12["sd_NB"] <-NULL
+top_12["sd_B"] <-NULL
+top_12["pooled_sd"] <-NULL
+top_12["stand_diff_mean"] <-NULL
+top_12["sd_NB"] <-NULL
+top_12["pvalue"] <-NULL
+top_12["SMD_order"] <-NULL
+top_12["Cor_order"] <-NULL
+top_12["ROM"] <-NULL
+top_12["foldchange"] <-NULL
 
-#examined data of incorectly labels top 20 pepetides
-top_20<- read.csv("Top_20_List.csv", header = TRUE,)
-grp_top_20=c(unlist(top_20$Sequence))
-data_wrong_20<-data.frame(subset(data_filtered_final,data_filtered_final$combined_sequence%in%grp_top_20))
+
+####Bitter peptide candidate categorical charts#####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#creates empty dataframe top_12_t for a box plot
+columns = c("combined_sequence","Positions.in.Proteins","ANI","Grp","MBI")
+top_12_t <- data.frame(matrix(nrow = 0, ncol = length(columns)))
+colnames(top_12_t) = columns                        
+
+counter <- 1
+for (t12p in 1:nrow(top_12)){
+  while (counter <=nrow(samdf)) {
+    next_row <- nrow(top_12_t)+1
+    mod_peptide <-unlist(strsplit (x = top_12[t12p,"combined_sequence"], split = ""))
+#    if ("x" %in% mod_peptide){
+#      top_12_t[next_row,"Positions.in.Proteins"] <- paste0(top_12[t12p,"Positions.in.Proteins"],"*")    
+#    }
+#    else {
+#      top_12_t[next_row,"Positions.in.Proteins"] <- top_12[t12p,"Positions.in.Proteins"]    
+#    }
+    top_12_t[next_row,"combined_sequence"] <- top_12[t12p,"combined_sequence"]    
+    top_12_t[next_row,"ANI"] <- top_12[t12p,paste0("ANI.",samdf[counter,'sample_names'])]
+    top_12_t[next_row,"MBI"] <- samdf[counter,'MBI']
+    
+    grpID <- paste0("ANI:",samdf[counter,'sample_names'])
+    if (grpID %in% nb_sample_list){
+      top_12_t[next_row,"Grp"] <- "T_L"
+    }
+    if (grpID %in% b_sample_list){
+      top_12_t[next_row,"Grp"] <- "M_E"
+    }
+    counter <- counter + 1
+  }
+  counter <- 1
+}
+top_12_t$Grp <- factor(top_12_t$Grp, levels=c('T_L','M_E'))
+#generates box plot
+Box<-ggplot(data=top_12_t, aes(x=Positions.in.Proteins, y=log10(ANI), fill=factor(Grp)),) +
+  geom_boxplot()+
+  xlab(NULL)+
+  xlab("Selected top 12 bitter peptide candidates") +
+  ylab("Log10 (Relative abundance)") +
+  labs(fill = "Categorical grouping") +
+  scale_fill_manual(labels =c("Non-bitter","Bitter"), values=c("#0096FF", "#FFA500")) +
+  scale_y_continuous(breaks=c(4,5,6,7,8,9,10))+
+#                     limits = c(2.75, 10))+
+  geom_text(x=1.0, y=10, size=12, label="C")+
+  theme(
+    legend.justification=c(1,0),
+    legend.position = c(0.9975,0.01),
+    legend.text = element_text(size=10),
+    legend.title = element_text(size=12),
+    axis.title.x = element_text(size=12),
+    axis.title.y = element_text(size=12),
+    axis.text.x = element_text(size=12, colour="black", angle = 90, vjust = 0.5, hjust=1),
+    axis.text.y = element_text(size=12))+
+  guides(fill = guide_legend(ncol = 2))    
+
+png("Box_Plot.png",
+    width = 900,
+    height = 450)
+grid.arrange(Box)
+dev.off()
+
+
+####Bitter peptide candidate linear regression#####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+LR <-ggplot(data=top_12_t, aes(x = MBI, y = log10(ANI))) +
+  geom_point(aes(color=factor(Positions.in.Proteins)))+
+  geom_smooth(method=lm, se=FALSE, aes(color=factor(data_filtered))) +
+  xlab("Selected top 12 bitter peptide candidates") +
+  ylab("Log10 (Relative abundance)") +
+  labs(color = "Peptides") +
+  geom_text(x=0.5, y=10,size=12, label="B")+
+  scale_y_continuous(breaks=c(4,5,6,7,8,9,10))+
+  scale_x_continuous(breaks=c(0,0.5,1,1.5,2,2.5,3,3.5))+
+  theme(
+    legend.justification=c(1,-0.02),
+    legend.position = c(.998,0),
+    legend.text = element_text(size=12),
+    legend.title = element_text(size=12),
+    axis.text.x = element_text(size=12))+
+  guides(color = guide_legend(ncol = 5,title.position = "top"))
+
+png("LR.png",
+    width = 900,
+    height = 450)
+#grid.arrange(LRB,LRNB, ncol=2,bottom=textGrob("Cheese mean bitterness score", gp=gpar(fontsize=12, face="bold")))
+grid.arrange(LR)
+dev.off()
+
+
+
+####Bitter peptide candidate Volcano Plots Fold Change#####-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#loop that creates separate protein column by stripping Positions.in.proteins
+data_filtered$Protein <- NA
+protein_list <- c("β","κ","αs1","βA2","αs2","βA1")
+for (i in 1:nrow(data_filtered)){
+  temp_PIP <- unlist(strsplit (x = data_filtered[i,"Positions.in.Proteins"], split = " "))
+  if (temp_PIP[1] %in% protein_list){
+    data_filtered[i,"Protein"] <- as.character(temp_PIP[1])
+    }
+  else {
+    data_filtered[i,"Protein"] <- as.character("other")
+  }
+}
+grp_top_12 <- unique(top_12_t$Positions.in.Proteins)
+
+ggplot(data=data_filtered, aes(x=logfoldchange, y=logpvalue, label = Positions.in.Proteins)) +
+   xlab("Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)") +
+   ylab("-Log10(p-value)") +
+     xlim(-12.5, 12.5) +
+     labs(color = "Peptide's origin") +
+     ylim(-0.1,4) +
+  geom_point(aes(colour=Protein))+
+  geom_hline(yintercept = 1.3,linetype='dotted', col = 'red')+
+ theme(
+   legend.justification=c(1,-0.02),
+   legend.position = c(.998,0),
+   legend.text = element_text(size=12),
+   legend.title = element_text(size=12),
+   axis.text.x = element_text(size=12),
+   axis.title.y = element_text(size=12))+
+   scale_color_manual(
+     #labels=c("β-casein","βA1-casein","βA2-casein","αs1-casein","αs2-casein","κ-casein","Other"),
+     values=c(β="darkred",βA1="pink",βA2="red",αs1="gold2",αs2="green",κ="brown",other="#7F7F7F"))+
+#   # Rules for labeling beta peptides
+  geom_text_repel(
+    data = subset(data_filtered, data_filtered$Positions.in.Proteins %in% grp_top_12),
+    aes(label = Positions.in.Proteins),
+    #direction = "x",
+    #nudge_x =-.25,
+    #nudge_y = +5,
+    size = 6,
+    box.padding = unit(.5, "lines"),
+    point.padding = unit(.5, "lines"))
+
+
+ggsave("Volcano_Plot.png",
+       width = 5750/1.35,
+       height = 2500/1.5,
+       units = c("px"))
+dev.off()
