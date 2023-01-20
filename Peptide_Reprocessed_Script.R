@@ -195,10 +195,7 @@ datarn$combined_sequence <-paste0(datarn$Sequence,datarn$Modifications) #this co
     {
     datarn[i,'Positions.in.Proteins'] <-paste("P02666",temp_pnp[2])
     datarn[i,'Protein'] <- "P02666"
-  if (datarn[i,"Modifications"] != ""){
-    datarn[i,"Positions.in.Proteins"] <- paste0(datarn[i,"Positions.in.Proteins"],"*")    
-    }
-    }
+  }
 }
 
 #labels position in protein
@@ -216,6 +213,14 @@ datarn$Protein[datarn$Protein == "P02666A2"] <- BetaA2 #beta casein with H67 pos
 datarn$Protein[datarn$Protein == "P02662"] <- Alphas1
 datarn$Protein[datarn$Protein == "P02663"] <- Alphas2
 datarn$Protein[datarn$Protein == "P02668"] <- Kappa
+
+#loop that labels any beta casein without overlap with the genetic variant site 67 as just beta casein (P02666) in both protein and position in protein columns.
+
+for (i in 1:nrow(datarn))  {
+    if (datarn[i,"Modifications"] != ""){
+      datarn[i,"Positions.in.Proteins"] <- paste0(datarn[i,"Positions.in.Proteins"],"*")    
+    }
+  }
 
 
 
@@ -514,8 +519,7 @@ ggplot(data=data_filtered, aes(x=logfoldchange, y=logpvalue, label = Positions.i
     size = 6,
     box.padding = unit(.5, "lines"),
     point.padding = unit(.5, "lines"))
-
-
+ 
 ggsave("Volcano_Plot.png",
        width = 5750/1.35,
        height = 2500/1.5,
