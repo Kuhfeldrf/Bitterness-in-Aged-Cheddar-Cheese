@@ -9,11 +9,16 @@ install.packages("matrixTests")
 install.packages("gridExtra")
 install.packages("gtools")
 install.packages("Matrix")
-install.packages("ggplot")
+install.packages("ggplot2")
 install.packages("ggnewscale")
 install.packages("dplyr")
 install.packages("stringr")
+install.packages("tidyverse")
+install.packages("ggtext")
+install.packages("ggstatsplot")#probably can delete
+install.packages("ggrepel")
 
+library(ggstatsplot)#probably can delete
 library(gtools)
 library(matrixTests)
 library(dplyr)
@@ -25,8 +30,8 @@ library(Matrix)
 library(gridExtra)
 library(stringr)
 library(ggnewscale)
-
-
+library(tidyverse)
+library(ggtext)
 
 ####Import raw data, creates important data frames############################## 
     # samdf = sample information,
@@ -439,7 +444,8 @@ nrow(lit_ref)
 lit_ref_short <- subset(lit_ref,
                         select = c(combined_sequence,
                                    Groups,Bitterness.Threshold.value..umol.L.,
-                                   Mean.Bitterness.Intensity..1.15.))
+                                   Mean.Bitterness.Intensity..1.15.,
+                                   Literature.reference))
 
 #generates a final data frame which is the merged data frame of filtered and short literature reference, 
     #Ordered by top rand order mean first (most likely bitter peptide candidates at the top)
@@ -469,7 +475,8 @@ data_filtered_final <- data_filtered_final[,c("combined_sequence",
                                               "Top.Apex.RT.in.min",
                                               "Groups",
                                               "Bitterness.Threshold.value..umol.L.",
-                                              "Mean.Bitterness.Intensity..1.15.")]
+                                              "Mean.Bitterness.Intensity..1.15.",
+                                              "Literature.reference")]
 
 #generates dataframe of instrumental results with lit reference database
 lit_ref_final <-subset(data_filtered_final, data_filtered_final$Groups >= 1)
@@ -559,7 +566,8 @@ Box<-ggplot(data=top_12_t,
   geom_text(x=1.0,
             y=10,
             size=12,
-            label="C")+
+            label="A",
+            check_overlap = TRUE)+
   theme(
     legend.justification=c(1,0),
     legend.position = c(0.9975,0.01),
@@ -596,7 +604,8 @@ LR <-ggplot(data=top_12_t,
   geom_text(x=0.5,
             y=10,
             size=12,
-            label="B")+
+            label="A",
+            check_overlap = TRUE)+
   scale_y_continuous(breaks=c(4,5,6,7,8,9,10))+
   scale_x_continuous(breaks=c(0,0.5,1,1.5,2,2.5,3,3.5))+
   theme(
@@ -615,52 +624,259 @@ grid.arrange(LR)
 dev.off()
 
 
-
-####Bitter peptide candidate Volcano Plots Fold Change##########################
+####Bitter peptide candidate Volcano Plots Data Processing######################
 #loop that creates separate protein column by stripping Positions.in.proteins
-data_filtered$Protein <- NA
-protein_list <- c("β",
-                  "κ",
-                  "αs1",
-                  "βA2",
-                  "αs2",
-                  "βA1")
+
+data_filtered$Protein<- NA
 for (i in 1:nrow(data_filtered)){
   temp_PIP <- unlist(strsplit (x = data_filtered[i,"Positions.in.Proteins"], split = " "))
   if (temp_PIP[1] %in% protein_list){
     data_filtered[i,"Protein"] <- as.character(temp_PIP[1])
-    }
+  }
   else {
     data_filtered[i,"Protein"] <- as.character("other")
   }
 }
+data_filtered$Protein <- as.factor(data_filtered$Protein)
+protein_list <- c("κ",
+                  "αs1","αs2",
+                   "β","βA1","βA2")
+      # protein_list_exp <- c("κ",
+      #                       #"α<sub>s1</sub>","α<sub>s2</sub>",
+      #                       "β","βA1","βA2")
+      # abc_list <- c("A",
+      #               "B",
+      #               "C",
+      #               "D",
+      #               "E",
+      #               "F")
+      # 
+      # e1<-as.expression(expression(paste("1) β [60-65]")))
+      # e2<-as.expression(expression(paste("2) κ [97-103]")))
+      # e3<-as.expression(expression(paste("3) α"[s1]," [180-187]")))
+      # e4<-as.expression(expression(paste("4) β"[A2]," [60-68]")))
+      # e5<-as.expression(expression(paste("5) β [73-79]")))
+      # e6<-as.expression(expression(paste("6) β [198-205]")))
+      # e7<-as.expression(expression(paste("7) β [165-189]")))
+      # e8<-as.expression(expression(paste("8) β [111-116]")))
+      # e9<-as.expression(expression(paste("9) β [145-156]")))
+      # e10<-as.expression(expression(paste("10) α"[s1]," [181-190]")))
+      # e11<-as.expression(expression(paste("11) β"[A1]," [60-69]*")))
+      # e12<-as.expression(expression(paste("12) β"[A1]," [60-69]")))
+      # 
+      # elist<-(c(e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,e11,e12))
+      # #oplist<- c("β [60-65]","κ [97-103]","αs1 [180-187]","βA2 [60-68]","β [73-79]","β [198-205]","β [165-189]","β [111-116]","β [145-156]","αs1 [181-190]","βA1 [60-69]*","βA1 [60-69]")
+      # poplist <-head(data_filtered$Positions.in.Proteins,n=12)
+      # #as.expression(expression(paste("ROM_order", A[1][c]," (%)",sep="")))
+
+
+for (i in 1:nrow(data_filtered)){
+  temp_PIP <- unlist(strsplit (x = data_filtered[i,"Positions.in.Proteins"], split = " "))
+  if (temp_PIP[1] %in% protein_list){
+    data_filtered[i,"Protein"] <- as.character(temp_PIP[1])
+  }
+  else {
+    data_filtered[i,"Protein"] <- as.character("other")
+  }
+}
+      # 
+      # for (i in 1:nrow(data_filtered)){
+      #   temp_PIP <- unlist(strsplit (x = data_filtered[i,"Positions.in.Proteins"], split = " "))
+      #   for (j in 1:6){
+      #     if (temp_PIP[1] == protein_list[j]){
+      #       print(j)
+      #       data_filtered[i,"Protein"] <- protein_list[j]
+      #       }
+      #   if(temp_PIP[1] %in% protein_list){}
+      #   else{
+      #       data_filtered[i,"Protein"] <- as.character("other")
+      #   }  
+      #   }
+      # }
 grp_top_12 <- unique(top_12_t$Positions.in.Proteins)
 
-ggplot(data=data_filtered,
+
+
+#group the data_filtered data frame by protein
+grouped_data <- group_by(data_filtered, Protein)
+
+#calculate the total number of rows in the data_filtered data frame
+total_rows <- nrow(data_filtered)
+
+#calculate the total count of positive and negative logfoldchange for each unique protein
+counts_pos_FC<- summarise(grouped_data, count_pos = sum(logfoldchange  > 0))
+counts_neg_FC<- summarise(grouped_data, count_neg = sum(logfoldchange  < 0))
+#add a column with the percentage of total number of rows
+counts_pos_FC$percentage_pos<-NA
+counts_neg_FC$percentage_neg<-NA
+counts_neg_FC$pos_ratio<-NA
+for (i in 1:nrow(counts_pos_FC)){
+counts_pos_FC[i,"percentage_pos"] <- round(((counts_pos_FC[i,"count_pos"] / (counts_pos_FC[i,"count_pos"]+counts_neg_FC[i,"count_neg"])) * 100),1)
+counts_neg_FC[i,"percentage_neg"] <- round(((counts_neg_FC[i,"count_neg"] / (counts_pos_FC[i,"count_pos"]+counts_neg_FC[i,"count_neg"])) * 100),1)
+counts_neg_FC[i,"pos_ratio"] <- round(counts_pos_FC[i,"percentage_pos"] / counts_neg_FC[i,"percentage_neg"],1)
+}
+merged_protein_counts <- merge(counts_pos_FC, counts_neg_FC, by = "Protein")
+
+###Code for doing t-test, not needed
+        # results <- list()
+        # for (protein in unique(data_filtered$Protein)) {
+        #   positive <- data_filtered[data_filtered$Protein == protein & data_filtered$stand_diff_mean > 0, "stand_diff_mean"]
+        #   negative <- data_filtered[data_filtered$Protein == protein & data_filtered$stand_diff_mean < 0, "stand_diff_mean"]
+        #   print(protein)
+        #   print(positive)
+        #   print(negative)
+        #   results[[protein]] <- t.test(positive, negative, alternative = "two.sided")
+        # }
+        # results_df <- data.frame(Protein = character(),
+        #                          statistic = numeric(),
+        #                          p.value = numeric(),
+        #                          conf.int = numeric(),
+        #                          estimate = numeric(),
+        #                          method = character(),
+        #                          data.name = character(),
+        #                          row.names = integer(),
+        #                          stringsAsFactors = FALSE)
+        # 
+        # for (protein in unique(data_filtered$Protein)) {
+        #   positive <- data_filtered[data_filtered$Protein == protein & data_filtered$stand_diff_mean > 0, "stand_diff_mean"]
+        #   negative <- data_filtered[data_filtered$Protein == protein & data_filtered$stand_diff_mean < 0, "stand_diff_mean"]
+        #   result <- t.test(positive, negative, alternative = "two.sided")
+        #   results_df <- rbind(results_df, data.frame(Protein = protein,
+        #                                              statistic = result$statistic,
+        #                                              p.value = result$p.value,
+        #                                              conf.int = result$conf.int,
+        #                                              estimate = result$estimate,
+        #                                              method = result$method,
+        #                                              data.name = result$data.name,
+        #                                              row.names = NULL,
+        #                                              stringsAsFactors = FALSE))
+        # }
+        # 
+
+####################Separated Volcano Plots#####################################
+for (counter in 1:6){
+Pro_highlighted <- protein_list[counter]
+VCP <- ggplot(data=data_filtered,
+       aes(x=logfoldchange,
+           y=logpvalue)) +
+  theme_bw()+
+  xlab(NULL)+
+  ylab(NULL)+
+  xlim(-7.5, 7.5) +
+  ylim(-0.1,4) +
+  geom_hline(yintercept = 1.3,
+             linetype='dotted',
+             col = 'red')+
+  geom_richtext(x=-8,
+            y=4,
+            size=4,
+            label=paste0(abc_list[counter],") ",protein_list[counter],"-casein"),
+            vjust = "inward", 
+            hjust = "inward",
+            fontface=2)+
+  geom_text(x=8,
+                y=0,
+                size=4,
+                label=paste0("FC ratio: ",merged_protein_counts[counter,"pos_ratio"]),
+                vjust = "inward", 
+                hjust = "inward",
+                check_overlap = TRUE,
+                fontface=2)+
+  geom_point(aes(color=factor(Protein)),
+#             fill=factor(Protein)),
+             size = ifelse(1:nrow(data_filtered) <= 12, 3.5, 1.5),
+             alpha = ifelse(data_filtered$Protein == Pro_highlighted, 1, 0.05))+
+   scale_color_manual(
+     values=c(β="#D82909",
+              βA1="#f06625",
+               βA2="yellow2",
+               αs1="#baccdd",
+               αs2="#517fab",
+               κ="#0d0404",
+               other="#7F7F7F"))+
+    # scale_fill_manual(
+    #   values=c(β="#D82909",
+    #             βA1="#f06625",
+    #             βA2="black",
+    #             αs1="#baccdd",
+    #             αs2="#517fab",
+    #             κ="#0d0404",
+    #             other="#7F7F7F"))+
+
+  theme(legend.position="none")+
+  geom_text_repel(
+    data = subset(data_filtered,
+                  data_filtered$Positions.in.Proteins %in% grp_top_12 & data_filtered$Protein %in% Pro_highlighted),
+#    aes(label = paste0(ROM_order,") ",Positions.in.Proteins)),
+#    vjust = "inward", 
+#    hjust = "outward",             alpha = ifelse(data_filtered$Protein == Pro_highlighted, 1, 0.05))+
+    aes(label = paste0(ROM_order,") ",Positions.in.Proteins)),
+
+  #  label= substitute(ifelse(data_filtered$Positions.in.Proteins == poplist[data_filtered$ROM_order],elist[data_filtered$ROM_order],"")),
+    direction = "both",
+    color = "black",
+    nudge_x =.1,
+    nudge_y = .1,
+    size = 4,
+    box.padding = unit(.5, "lines"),
+    point.padding = unit(.5, "lines"))
+
+assign(str_c("VCP_", protein_list[counter]),VCP)
+print(str_c("VCP_", protein_list[counter]))
+}
+
+png("Volcano_Plot_Combined.png",
+    width = 900,
+    height = 540)
+#grid.arrange(LRB,LRNB, ncol=2,bottom=textGrob("Cheese mean bitterness score", gp=gpar(fontsize=12, face="bold")))
+grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2, left=paste("-Log(p-value)"),right="", bottom="Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
+#grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2)
+dev.off()
+
+
+#can get removed in final code
+    # png("Volcano_Plot_test.png",
+    #     width = 900,
+    #     height = 540)
+    # #grid.arrange(LRB,LRNB, ncol=2,bottom=textGrob("Cheese mean bitterness score", gp=gpar(fontsize=12, face="bold")))
+    # #grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2, left=paste("-Log(p-value)"),right="", bottom="Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
+    # grid.arrange(VCP_βA2)
+    # dev.off()
+    # # 
+
+####################Combined Volcano Plot#######################################
+VCP<-ggplot(data=data_filtered,
        aes(x=logfoldchange,
            y=logpvalue,
            label = Positions.in.Proteins)) +
-   xlab("Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)") +
-   ylab("-Log10(p-value)") +
-     xlim(-12.5, 12.5) +
-     labs(color = "Peptide's origin") +
-     ylim(-0.1,4) +
+  theme_bw()+
+    xlab("Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)") +
+  ylab("-Log10(p-value)") +
+  xlim(-12.5, 12.5) +
+  labs(color = "Peptide's origin") +
+  ylim(-0.1,4) +
   geom_point(aes(colour=Protein))+
   geom_hline(yintercept = 1.3,
              linetype='dotted',
              col = 'red')+
- theme(
-   legend.justification=c(1,-0.02),
-   legend.position = c(.998,0),
-   legend.text = element_text(size=12),
-   legend.title = element_text(size=12),
-   axis.text.x = element_text(size=12),
-   axis.title.y = element_text(size=12))+
+  theme(
+    legend.justification=c(1,-0.02),
+    legend.position = c(.998,0),
+    legend.text = element_text(size=12),
+    legend.title = element_text(size=12),
+    axis.text.x = element_text(size=12),
+    axis.title.y = element_text(size=12))+
   ####################protein legend
   geom_point(aes(colour = Protein),
              size = ifelse(1:nrow(data_filtered) <= 12, 3.5, 1.5))+
   scale_color_manual(
-    values=c(β="darkred",βA1="pink",βA2="deeppink",αs1="darkgreen",αs2="chartreuse",κ="darkorange3",other="#7F7F7F"))+
+    values=c(β="#950a11",
+             βA1="#f06625",
+             βA2="yellow2",
+             αs1="#baccdd",
+             αs2="#517fab", ##517fab
+             κ="#0d0404",
+             other="#7F7F7F"))+
   #################Top_12 legend
   ggnewscale::new_scale_colour() + 
   labs(color = "Selected peptides") +
@@ -682,18 +898,18 @@ ggplot(data=data_filtered,
              "10) αs1 [181-190]",
              "11) βA1 [60-69]*",
              "12) βA1 [60-69]"),
-    values=c("1) β [60-65]"="darkred",
-             "2) κ [97-103]"="darkorange3",
-             "3) αs1 [180-187]"="darkgreen",
-             "4) βA2 [60-68]"="deeppink",
-             "5) β [73-79]"="darkred",
-             "6) β [198-205]"="darkred",
-             "7) β [165-189]"="darkred",
-             "8) β [111-116]"="darkred",
-             "9) β [145-156]"="darkred",
-             "10) αs1 [181-190]"="darkgreen",
-             "11) βA1 [60-69]*"="pink",
-             "12) βA1 [60-69]"="pink"))+
+    values=c("1) β [60-65]"="#950a11",
+             "2) κ [97-103]"="#0d0404",
+             "3) αs1 [180-187]"="#baccdd",
+             "4) βA2 [60-68]"="yellow2",
+             "5) β [73-79]"="#950a11",
+             "6) β [198-205]"="#950a11",
+             "7) β [165-189]"="#950a11",
+             "8) β [111-116]"="#950a11",
+             "9) β [145-156]"="#950a11",
+             "10) αs1 [181-190]"="#baccdd",
+             "11) βA1 [60-69]*"="#f06625",
+             "12) βA1 [60-69]"="#f06625"))+
   theme(legend.key=element_rect(fill="white",
                                 color = "white"))+
   guides(colour=guide_legend(override.aes=list(color="white"),
@@ -713,20 +929,5 @@ ggplot(data=data_filtered,
 png("Volcano_Plot.png",
     width = 900,
     height = 450)
-#grid.arrange(LRB,LRNB, ncol=2,bottom=textGrob("Cheese mean bitterness score", gp=gpar(fontsize=12, face="bold")))
 grid.arrange(VCP)
 dev.off()
-
-# 
-# ggsave("Volcano_Plot.png",
-#        width = 5750/1.35,
-#        height = 2500/1.5,
-#        units = c("px"))
-# dev.off()
-# 
-# png("all.png",
-#     width = 900,
-#     height = 900)
-# grid.arrange(LR,Box, ncol=2, arrangeGrob(Box, nrow=2))
-# #grid.arrange(LRC, arrangeGrob(Box, nrow=2))
-# dev.off()
