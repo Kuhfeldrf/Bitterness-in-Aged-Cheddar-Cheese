@@ -713,7 +713,7 @@ VCP <- ggplot(data=data_filtered,
                 fontface=2)+
   geom_point(aes(color=factor(Protein)),
              size = ifelse(1:nrow(data_filtered) <= 12, 3.5, 1.5),
-             alpha = ifelse(data_filtered$Protein == Pro_highlighted, 1, 0.05))+
+             alpha = ifelse(data_filtered$Protein == Pro_highlighted, 1, 0))+
    scale_color_manual(
      values=c(β="#D82909",
               βA1="#f06625",
@@ -838,9 +838,16 @@ png("Volcano_Plot.png",
 grid.arrange(VCP)
 dev.off()
 
-########################beta heat map###########################################
+########################beta heat map abundance#################################
 #subests all beta-casein into seperate dataframe
 data_filtered_beta <- data_filtered[grepl("\\b(β|βA1|βA2)\\b", data_filtered$Positions.in.Proteins), ]
+
+#betaA1 fasta seq to list
+beta_seq <- "RELEELNVPGEIVESLSSSEESITRINKKIEKFQSEEQQQTEDELQDKIHPFAQTQSLVYPFPGPIHNSLPQNIPPLTQTPVVVPPFLQPEVMGVSKVKEAMAPKHKEMPFPKYPVEPFTESQSLTLTDVENLHLPLPLLQSWMHQPHQPLPPTVMFPPQSVLSLSQSKVLPVPQKAVPYPQRDMPIQAFLLYQEPVLGPVRGPFPIIV"
+beta_fasta_seq <- strsplit(beta_seq, "")[[1]]
+length(beta_fasta_seq)
+#[1] 209
+
 # select columns that start with "ANI" and contain E,M,T,L
 ani_E_cols <- grep("^ANI.*E.*", colnames(data_filtered_beta), value=TRUE)
 ani_M_cols <- grep("^ANI.*M.*", colnames(data_filtered_beta), value=TRUE)
@@ -857,86 +864,79 @@ beta_T_means <- rowMeans(data_filtered_beta[, ani_T_cols])
 data_filtered_beta <- cbind(data_filtered_beta,beta_E_means,beta_M_means,beta_T_means,beta_L_means)
 
 # create an empty multidimensional dataframe with dimensions defined by start_position, stop_position and number of rows in data_filtered
-beta_hm_B<- array(NA, dim=c(max(data_filtered_beta$stop_position), nrow(data_filtered_beta)))
-beta_hm_NB<- array(NA, dim=c(max(data_filtered_beta$stop_position), nrow(data_filtered_beta)))
-beta_hm_E<- array(NA, dim=c(max(data_filtered_beta$stop_position), nrow(data_filtered_beta)))
-beta_hm_M<- array(NA, dim=c(max(data_filtered_beta$stop_position), nrow(data_filtered_beta)))
-beta_hm_T<- array(NA, dim=c(max(data_filtered_beta$stop_position), nrow(data_filtered_beta)))
-beta_hm_L<- array(NA, dim=c(max(data_filtered_beta$stop_position), nrow(data_filtered_beta)))
+beta_hm_E<- array(NA, dim=c(length(beta_fasta_seq), nrow(data_filtered_beta)))
+beta_hm_M<- array(NA, dim=c(length(beta_fasta_seq), nrow(data_filtered_beta)))
+beta_hm_T<- array(NA, dim=c(length(beta_fasta_seq), nrow(data_filtered_beta)))
+beta_hm_L<- array(NA, dim=c(length(beta_fasta_seq), nrow(data_filtered_beta)))
+beta_hm_smd<- array(NA, dim=c(length(beta_fasta_seq), nrow(data_filtered_beta)))
 
 # loop through each row in data_filtered
 for(i in 1:nrow(data_filtered_beta)) {
   # get the relevant start_position, stop_position and mean_B values
   start_pos <- data_filtered_beta$start_position[i]
   stop_pos <- data_filtered_beta$stop_position[i]
-  mean_B_val <- data_filtered_beta$mean_B[i]
-  mean_NB_val <- data_filtered_beta$mean_NB[i]
   mean_E_val <- data_filtered_beta$beta_E_means[i]
   mean_T_val <- data_filtered_beta$beta_T_means[i]
   mean_M_val <- data_filtered_beta$beta_M_means[i]
   mean_L_val <- data_filtered_beta$beta_L_means[i]
+  smd_val <- data_filtered_beta$stand_diff_mean[i]
   
-  # assign mean_B_val to the relevant positions in the beta_hm and rename the column
-  beta_hm_B[start_pos:stop_pos,i] <- mean_B_val
-  beta_hm_NB[start_pos:stop_pos,i] <- mean_NB_val
+  # assign mean_hm_val to the relevant positions in the beta_hm and rename the column
+  # Create a new column in beta_hm for the amino acid
   beta_hm_E[start_pos:stop_pos,i] <- mean_E_val 
   beta_hm_T[start_pos:stop_pos,i] <- mean_T_val 
   beta_hm_M[start_pos:stop_pos,i] <- mean_M_val 
   beta_hm_L[start_pos:stop_pos,i] <- mean_L_val 
+  beta_hm_smd[start_pos:stop_pos,i] <- smd_val 
   
 }
-# Create a new column in beta_hm for the amino acid
-#betaA1 fasta seq to list
-beta_seq <- "RELEELNVPGEIVESLSSSEESITRINKKIEKFQSEEQQQTEDELQDKIHPFAQTQSLVYPFPGPIHNSLPQNIPPLTQTPVVVPPFLQPEVMGVSKVKEAMAPKHKEMPFPKYPVEPFTESQSLTLTDVENLHLPLPLLQSWMHQPHQPLPPTVMFPPQSVLSLSQSKVLPVPQKAVPYPQRDMPIQAFLLYQEPVLGPVRGPFPIIV"
-beta_fasta_seq <- strsplit(beta_seq, "")[[1]]
-length(beta_fasta_seq)
-      #[1] 209
 #extracts peptides names as list
-beta_pep_name_B <- as.list(c("index","AAs","Avg_mean_B","count"))
-beta_pep_name_B <- append(beta_pep_name_B, data_filtered_beta$Positions.in.Proteins)
+beta_pep_name <- as.list(c("index",
+                           "AAs",
+                           "count",
+                           "avg_abs_E",
+                           "avg_abs_M",
+                           "avg_abs_L",
+                           "avg_abs_T",
+                           "avg_smd"))
 
-beta_pep_name_NB <- as.list(c("index","AAs","Avg_mean_NB","count"))
-beta_pep_name_NB <- append(beta_pep_name_NB, data_filtered_beta$Positions.in.Proteins)
 # count non-NA values in each row
-row_counts<- apply(beta_hm_B, 1, function(x) sum(!is.na(x)))
+row_counts<- apply(beta_hm_E, 1, function(x) sum(!is.na(x)))
 
 # compute row means, ignoring NA values
-row_means_B <- rowMeans(beta_hm_B, na.rm = TRUE)
-row_means_NB <- rowMeans(beta_hm_NB, na.rm = TRUE)
 row_means_E <- rowMeans(beta_hm_E, na.rm = TRUE)
 row_means_T <- rowMeans(beta_hm_T, na.rm = TRUE)
 row_means_M <- rowMeans(beta_hm_M, na.rm = TRUE)
 row_means_L <- rowMeans(beta_hm_L, na.rm = TRUE)
+row_means_smd <-rowMeans(beta_hm_smd, na.rm = TRUE)
 
 #generate index
 index <- 1:length(beta_fasta)
-# adds counts, average, and fasta sequence
-beta_hm_B<-cbind(index,beta_fasta_seq,row_means_B,row_counts,beta_hm_B)
-colnames(beta_hm_B) <- beta_pep_name_B
 
-beta_hm_NB<-as.data.frame(cbind(index,beta_fasta_seq,row_means_NB,row_counts,beta_hm_NB))
-colnames(beta_hm_NB) <- beta_pep_name_NB
-beta_hm_B<-as.data.frame(beta_hm_B)
-beta_hm_NB<-as.data.frame(beta_hm_NB)
-
-merged_mh <- merge(beta_hm_NB[c(1:4)], beta_hm_B,
-                   sort = FALSE)
-merged_mh <-merged_mh[c("index",
-                        "AAs",
-                        "count",
-                        "Avg_mean_NB",
-                        "Avg_mean_B")]
-merged_mh <-cbind(merged_mh,
+#created merged fil for export
+merged_mh <-cbind(index,
+                  beta_fasta_seq,
+                  row_counts,
                   row_means_E,
                   row_means_M,
                   row_means_L,
-                  row_means_T) 
+                  row_means_T,
+                  row_means_smd) 
+colnames(merged_mh) <- beta_pep_name
+
 merged_mh <-t(merged_mh)
 write.csv(merged_mh, "merged_dataframe_heatmap_beta_casein.csv")
 
-########################as1 heat map###########################################
+########################as1 heat map abundance##################################
 #subests all as1-casein into seperate dataframe
 data_filtered_as1 <- data_filtered[grepl("\\b(αs1)\\b", data_filtered$Positions.in.Proteins), ]
+
+#as1 fasta seq to list
+as1_seq <- "RPKHPIKHQGLPQEVLNENLLRFFVAPFPEVFGKEKVNELSKDIGSESTEDQAMEDIKQMEAESISSSEEIVPNSVEQKHIQKEDVPSERYLGYLEQLLRLKKYKVPQLEIVPNSAEERLHSMKEGIHAQQKEPMIGVNQELAYFYPELFRQFYQLDAYPSGAWYYVPLGTQYTDAPSFSDIPNPIGSENSEKTTMPLW"
+as1_fasta_seq <- strsplit(as1_seq, "")[[1]]
+length(as1_fasta_seq)
+    #[1] 199
+
 # select columns that start with "ANI" and contain E,M,T,L
 ani_E_cols <- grep("^ANI.*E.*", colnames(data_filtered_as1), value=TRUE)
 ani_M_cols <- grep("^ANI.*M.*", colnames(data_filtered_as1), value=TRUE)
@@ -952,90 +952,82 @@ as1_T_means <- rowMeans(data_filtered_as1[, ani_T_cols])
 #merges averaged E,T,L,M with as1 subset df 
 data_filtered_as1 <- cbind(data_filtered_as1,as1_E_means,as1_M_means,as1_T_means,as1_L_means)
 
-#as1 fasta seq to list
-as1_seq <- "RPKHPIKHQGLPQEVLNENLLRFFVAPFPEVFGKEKVNELSKDIGSESTEDQAMEDIKQMEAESISSSEEIVPNSVEQKHIQKEDVPSERYLGYLEQLLRLKKYKVPQLEIVPNSAEERLHSMKEGIHAQQKEPMIGVNQELAYFYPELFRQFYQLDAYPSGAWYYVPLGTQYTDAPSFSDIPNPIGSENSEKTTMPLW"
-as1_fasta_seq <- strsplit(as1_seq, "")[[1]]
-length(as1_fasta_seq)
-    #[1] 199
-
 # create an empty multidimensional dataframe with dimensions defined by start_position, stop_position and number of rows in data_filtered
-as1_hm_B<- array(NA, dim=c(length(as1_fasta_seq), nrow(data_filtered_as1)))
-as1_hm_NB<- array(NA, dim=c(length(as1_fasta_seq), nrow(data_filtered_as1)))
 as1_hm_E<- array(NA, dim=c(length(as1_fasta_seq), nrow(data_filtered_as1)))
 as1_hm_M<- array(NA, dim=c(length(as1_fasta_seq), nrow(data_filtered_as1)))
 as1_hm_T<- array(NA, dim=c(length(as1_fasta_seq), nrow(data_filtered_as1)))
 as1_hm_L<- array(NA, dim=c(length(as1_fasta_seq), nrow(data_filtered_as1)))
+as1_hm_smd<- array(NA, dim=c(length(as1_fasta_seq), nrow(data_filtered_as1)))
 
 # loop through each row in data_filtered
 for(i in 1:nrow(data_filtered_as1)) {
   # get the relevant start_position, stop_position and mean_B values
   start_pos <- data_filtered_as1$start_position[i]
   stop_pos <- data_filtered_as1$stop_position[i]
-  mean_B_val <- data_filtered_as1$mean_B[i]
-  mean_NB_val <- data_filtered_as1$mean_NB[i]
   mean_E_val <- data_filtered_as1$as1_E_means[i]
   mean_T_val <- data_filtered_as1$as1_T_means[i]
   mean_M_val <- data_filtered_as1$as1_M_means[i]
   mean_L_val <- data_filtered_as1$as1_L_means[i]
+  smd_val <- data_filtered_as1$stand_diff_mean[i]
   
-  # assign mean_B_val to the relevant positions in the as1_hm and rename the column
-  as1_hm_B[start_pos:stop_pos,i] <- mean_B_val
-  as1_hm_NB[start_pos:stop_pos,i] <- mean_NB_val
+  # assign mean_hm_val to the relevant positions in the as1_hm and rename the column
+  # Create a new column in as1_hm for the amino acid
   as1_hm_E[start_pos:stop_pos,i] <- mean_E_val 
   as1_hm_T[start_pos:stop_pos,i] <- mean_T_val 
   as1_hm_M[start_pos:stop_pos,i] <- mean_M_val 
   as1_hm_L[start_pos:stop_pos,i] <- mean_L_val 
+  as1_hm_smd[start_pos:stop_pos,i] <- smd_val 
   
 }
-# Create a new column in beta_hm for the amino acid
-
 #extracts peptides names as list
-as1_pep_name_B <- as.list(c("index","AAs","Avg_mean_B","count"))
-as1_pep_name_B <- append(as1_pep_name_B, data_filtered_as1$Positions.in.Proteins)
+as1_pep_name <- as.list(c("index",
+                           "AAs",
+                           "count",
+                           "avg_abs_E",
+                           "avg_abs_M",
+                           "avg_abs_L",
+                           "avg_abs_T",
+                           "avg_smd"))
 
-as1_pep_name_NB <- as.list(c("index","AAs","Avg_mean_NB","count"))
-as1_pep_name_NB <- append(as1_pep_name_NB, data_filtered_as1$Positions.in.Proteins)
 # count non-NA values in each row
-as1_row_counts<- apply(as1_hm_B, 1, function(x) sum(!is.na(x)))
+row_counts<- apply(as1_hm_E, 1, function(x) sum(!is.na(x)))
 
 # compute row means, ignoring NA values
-as1_row_means_B <- rowMeans(as1_hm_B, na.rm = TRUE)
-as1_row_means_NB <- rowMeans(as1_hm_NB, na.rm = TRUE)
-as1_row_means_E <- rowMeans(as1_hm_E, na.rm = TRUE)
-as1_row_means_T <- rowMeans(as1_hm_T, na.rm = TRUE)
-as1_row_means_M <- rowMeans(as1_hm_M, na.rm = TRUE)
-as1_row_means_L <- rowMeans(as1_hm_L, na.rm = TRUE)
+row_means_E <- rowMeans(as1_hm_E, na.rm = TRUE)
+row_means_T <- rowMeans(as1_hm_T, na.rm = TRUE)
+row_means_M <- rowMeans(as1_hm_M, na.rm = TRUE)
+row_means_L <- rowMeans(as1_hm_L, na.rm = TRUE)
+row_means_smd <-rowMeans(as1_hm_smd, na.rm = TRUE)
 
 #generate index
 index <- 1:length(as1_fasta_seq)
-# adds counts, average, and fasta sequence
-as1_hm_B<-cbind(index,as1_fasta_seq,as1_row_means_B,as1_row_counts,as1_hm_B)
-colnames(as1_hm_B) <- as1_pep_name_B
 
-as1_hm_NB<-as.data.frame(cbind(index,as1_fasta_seq,as1_row_means_NB,as1_row_counts,as1_hm_NB))
-colnames(as1_hm_NB) <- as1_pep_name_NB
-as1_hm_B<-as.data.frame(as1_hm_B)
-as1_hm_NB<-as.data.frame(as1_hm_NB)
+#created merged fil for export
+merged_mh <-cbind(index,
+                  as1_fasta_seq,
+                  row_counts,
+                  row_means_E,
+                  row_means_M,
+                  row_means_L,
+                  row_means_T,
+                  row_means_smd) 
+colnames(merged_mh) <- as1_pep_name
 
-as1_merged_mh <- merge(as1_hm_NB[c(1:4)], as1_hm_B,
-                   sort = FALSE)
-as1_merged_mh <-as1_merged_mh[c("index",
-                        "AAs",
-                        "count",
-                        "Avg_mean_NB",
-                        "Avg_mean_B")]
-as1_merged_mh <-cbind(as1_merged_mh,
-                      as1_row_means_E,
-                      as1_row_means_M,
-                      as1_row_means_L,
-                      as1_row_means_T) 
-as1_merged_mh <-t(as1_merged_mh)
-write.csv(as1_merged_mh, "merged_dataframe_heatmap_as1_casein.csv")
+merged_mh <-t(merged_mh)
+write.csv(merged_mh, "merged_dataframe_heatmap_as1_casein.csv")
 
 
-########################as2 heat map###########################################
+########################as2 heat map abundance##################################
+
 #subests all as2-casein into seperate dataframe
 data_filtered_as2 <- data_filtered[grepl("\\b(αs2)\\b", data_filtered$Positions.in.Proteins), ]
+
+#as2 fasta seq to list
+as2_seq <- "KNTMEHVSSSEESIISQETYKQEKNMAINPSKENLCSTFCKEVVRNANEEEYSIGSSSEESAEVATEEVKITVDDKHYQKALNEINQFYQKFPQYLQYLYQGPIVLNPWDQVKRNAVPITPTLNREQLSTSEENSKKTVDMESTEVFTKKTKLTEEEKNRLNFLKKISQRYQKFALPQYLKTVYQHQKAMKPWIQPKTKVIPYVRYL"
+as2_fasta_seq <- strsplit(as2_seq, "")[[1]]
+length(as2_fasta_seq)
+      #[1] 207
+
 # select columns that start with "ANI" and contain E,M,T,L
 ani_E_cols <- grep("^ANI.*E.*", colnames(data_filtered_as2), value=TRUE)
 ani_M_cols <- grep("^ANI.*M.*", colnames(data_filtered_as2), value=TRUE)
@@ -1051,90 +1043,82 @@ as2_T_means <- rowMeans(data_filtered_as2[, ani_T_cols])
 #merges averaged E,T,L,M with as2 subset df 
 data_filtered_as2 <- cbind(data_filtered_as2,as2_E_means,as2_M_means,as2_T_means,as2_L_means)
 
-#as2 fasta seq to list
-as2_seq <- "KNTMEHVSSSEESIISQETYKQEKNMAINPSKENLCSTFCKEVVRNANEEEYSIGSSSEESAEVATEEVKITVDDKHYQKALNEINQFYQKFPQYLQYLYQGPIVLNPWDQVKRNAVPITPTLNREQLSTSEENSKKTVDMESTEVFTKKTKLTEEEKNRLNFLKKISQRYQKFALPQYLKTVYQHQKAMKPWIQPKTKVIPYVRYL"
-as2_fasta_seq <- strsplit(as2_seq, "")[[1]]
-length(as2_fasta_seq)
-      #[1] 207
 
 # create an empty multidimensional dataframe with dimensions defined by start_position, stop_position and number of rows in data_filtered
-as2_hm_B<- array(NA, dim=c(length(as2_fasta_seq), nrow(data_filtered_as2)))
-as2_hm_NB<- array(NA, dim=c(length(as2_fasta_seq), nrow(data_filtered_as2)))
 as2_hm_E<- array(NA, dim=c(length(as2_fasta_seq), nrow(data_filtered_as2)))
 as2_hm_M<- array(NA, dim=c(length(as2_fasta_seq), nrow(data_filtered_as2)))
 as2_hm_T<- array(NA, dim=c(length(as2_fasta_seq), nrow(data_filtered_as2)))
 as2_hm_L<- array(NA, dim=c(length(as2_fasta_seq), nrow(data_filtered_as2)))
+as2_hm_smd<- array(NA, dim=c(length(as2_fasta_seq), nrow(data_filtered_as2)))
 
 # loop through each row in data_filtered
 for(i in 1:nrow(data_filtered_as2)) {
   # get the relevant start_position, stop_position and mean_B values
   start_pos <- data_filtered_as2$start_position[i]
   stop_pos <- data_filtered_as2$stop_position[i]
-  mean_B_val <- data_filtered_as2$mean_B[i]
-  mean_NB_val <- data_filtered_as2$mean_NB[i]
   mean_E_val <- data_filtered_as2$as2_E_means[i]
   mean_T_val <- data_filtered_as2$as2_T_means[i]
   mean_M_val <- data_filtered_as2$as2_M_means[i]
   mean_L_val <- data_filtered_as2$as2_L_means[i]
+  smd_val <- data_filtered_as2$stand_diff_mean[i]
   
-  # assign mean_B_val to the relevant positions in the as2_hm and rename the column
-  as2_hm_B[start_pos:stop_pos,i] <- mean_B_val
-  as2_hm_NB[start_pos:stop_pos,i] <- mean_NB_val
+  # assign mean_hm_val to the relevant positions in the as2_hm and rename the column
+  # Create a new column in as2_hm for the amino acid
   as2_hm_E[start_pos:stop_pos,i] <- mean_E_val 
   as2_hm_T[start_pos:stop_pos,i] <- mean_T_val 
   as2_hm_M[start_pos:stop_pos,i] <- mean_M_val 
   as2_hm_L[start_pos:stop_pos,i] <- mean_L_val 
+  as2_hm_smd[start_pos:stop_pos,i] <- smd_val 
   
 }
-# Create a new column in beta_hm for the amino acid
-
 #extracts peptides names as list
-as2_pep_name_B <- as.list(c("index","AAs","Avg_mean_B","count"))
-as2_pep_name_B <- append(as2_pep_name_B, data_filtered_as2$Positions.in.Proteins)
+as2_pep_name <- as.list(c("index",
+                          "AAs",
+                          "count",
+                          "avg_abs_E",
+                          "avg_abs_M",
+                          "avg_abs_L",
+                          "avg_abs_T",
+                          "avg_smd"))
 
-as2_pep_name_NB <- as.list(c("index","AAs","Avg_mean_NB","count"))
-as2_pep_name_NB <- append(as2_pep_name_NB, data_filtered_as2$Positions.in.Proteins)
 # count non-NA values in each row
-as2_row_counts<- apply(as2_hm_B, 1, function(x) sum(!is.na(x)))
+row_counts<- apply(as2_hm_E, 1, function(x) sum(!is.na(x)))
 
 # compute row means, ignoring NA values
-as2_row_means_B <- rowMeans(as2_hm_B, na.rm = TRUE)
-as2_row_means_NB <- rowMeans(as2_hm_NB, na.rm = TRUE)
-as2_row_means_E <- rowMeans(as2_hm_E, na.rm = TRUE)
-as2_row_means_T <- rowMeans(as2_hm_T, na.rm = TRUE)
-as2_row_means_M <- rowMeans(as2_hm_M, na.rm = TRUE)
-as2_row_means_L <- rowMeans(as2_hm_L, na.rm = TRUE)
+row_means_E <- rowMeans(as2_hm_E, na.rm = TRUE)
+row_means_T <- rowMeans(as2_hm_T, na.rm = TRUE)
+row_means_M <- rowMeans(as2_hm_M, na.rm = TRUE)
+row_means_L <- rowMeans(as2_hm_L, na.rm = TRUE)
+row_means_smd <-rowMeans(as2_hm_smd, na.rm = TRUE)
 
 #generate index
 index <- 1:length(as2_fasta_seq)
-# adds counts, average, and fasta sequence
-as2_hm_B<-cbind(index,as2_fasta_seq,as2_row_means_B,as2_row_counts,as2_hm_B)
-colnames(as2_hm_B) <- as2_pep_name_B
 
-as2_hm_NB<-as.data.frame(cbind(index,as2_fasta_seq,as2_row_means_NB,as2_row_counts,as2_hm_NB))
-colnames(as2_hm_NB) <- as2_pep_name_NB
-as2_hm_B<-as.data.frame(as2_hm_B)
-as2_hm_NB<-as.data.frame(as2_hm_NB)
+#created merged fil for export
+merged_mh <-cbind(index,
+                  as2_fasta_seq,
+                  row_counts,
+                  row_means_E,
+                  row_means_M,
+                  row_means_L,
+                  row_means_T,
+                  row_means_smd) 
+colnames(merged_mh) <- as2_pep_name
 
-as2_merged_mh <- merge(as2_hm_NB[c(1:4)], as2_hm_B,
-                       sort = FALSE)
-as2_merged_mh <-as2_merged_mh[c("index",
-                                "AAs",
-                                "count",
-                                "Avg_mean_NB",
-                                "Avg_mean_B")]
-as2_merged_mh <-cbind(as2_merged_mh,
-                      as2_row_means_E,
-                      as2_row_means_M,
-                      as2_row_means_L,
-                      as2_row_means_T) 
-as2_merged_mh <-t(as2_merged_mh)
-write.csv(as2_merged_mh, "merged_dataframe_heatmap_as2_casein.csv")
+merged_mh <-t(merged_mh)
+write.csv(merged_mh, "merged_dataframe_heatmap_as2_casein.csv")
 
 
-########################kapa heat map###########################################
+########################kapa heat map abundance#################################
 #subests all kapa-casein into seperate dataframe
 data_filtered_kapa <- data_filtered[grepl("\\b(κ)\\b", data_filtered$Positions.in.Proteins), ]
+
+#kapaA1 fasta seq to list
+kapa_seq <- "QEQNQEQPIRCEKDERFFSDKIAKYIPIQYVLSRYPSYGLNYYQQKPVALINNQFLPYPYYAKPAAVRSPAQILQWQVLSNTVPAKSCQAQPTTMARHPHPHLSFMAIPPKKNQDKTEIPTINTIASGEPTSTPTTEAVESTVATLEDSPEVIESPPEINTVQVTSTAV"
+kapa_fasta_seq <- strsplit(kapa_seq, "")[[1]]
+length(kapa_fasta_seq)
+      #[1] 169
+
 # select columns that start with "ANI" and contain E,M,T,L
 ani_E_cols <- grep("^ANI.*E.*", colnames(data_filtered_kapa), value=TRUE)
 ani_M_cols <- grep("^ANI.*M.*", colnames(data_filtered_kapa), value=TRUE)
@@ -1150,82 +1134,67 @@ kapa_T_means <- rowMeans(data_filtered_kapa[, ani_T_cols])
 #merges averaged E,T,L,M with kapa subset df 
 data_filtered_kapa <- cbind(data_filtered_kapa,kapa_E_means,kapa_M_means,kapa_T_means,kapa_L_means)
 
-#kapaA1 fasta seq to list
-kapa_seq <- "QEQNQEQPIRCEKDERFFSDKIAKYIPIQYVLSRYPSYGLNYYQQKPVALINNQFLPYPYYAKPAAVRSPAQILQWQVLSNTVPAKSCQAQPTTMARHPHPHLSFMAIPPKKNQDKTEIPTINTIASGEPTSTPTTEAVESTVATLEDSPEVIESPPEINTVQVTSTAV"
-kapa_fasta_seq <- strsplit(kapa_seq, "")[[1]]
-length(kapa_fasta_seq)
-      #[1] 169
 
 # create an empty multidimensional dataframe with dimensions defined by start_position, stop_position and number of rows in data_filtered
-kapa_hm_B<- array(NA, dim=c(length(kapa_fasta_seq), nrow(data_filtered_kapa)))
-kapa_hm_NB<- array(NA, dim=c(length(kapa_fasta_seq), nrow(data_filtered_kapa)))
 kapa_hm_E<- array(NA, dim=c(length(kapa_fasta_seq), nrow(data_filtered_kapa)))
 kapa_hm_M<- array(NA, dim=c(length(kapa_fasta_seq), nrow(data_filtered_kapa)))
 kapa_hm_T<- array(NA, dim=c(length(kapa_fasta_seq), nrow(data_filtered_kapa)))
 kapa_hm_L<- array(NA, dim=c(length(kapa_fasta_seq), nrow(data_filtered_kapa)))
+kapa_hm_smd<- array(NA, dim=c(length(kapa_fasta_seq), nrow(data_filtered_kapa)))
 
 # loop through each row in data_filtered
 for(i in 1:nrow(data_filtered_kapa)) {
   # get the relevant start_position, stop_position and mean_B values
   start_pos <- data_filtered_kapa$start_position[i]
   stop_pos <- data_filtered_kapa$stop_position[i]
-  mean_B_val <- data_filtered_kapa$mean_B[i]
-  mean_NB_val <- data_filtered_kapa$mean_NB[i]
   mean_E_val <- data_filtered_kapa$kapa_E_means[i]
   mean_T_val <- data_filtered_kapa$kapa_T_means[i]
   mean_M_val <- data_filtered_kapa$kapa_M_means[i]
   mean_L_val <- data_filtered_kapa$kapa_L_means[i]
+  smd_val <- data_filtered_kapa$stand_diff_mean[i]
   
-  # assign mean_B_val to the relevant positions in the kapa_hm and rename the column
-  kapa_hm_B[start_pos:stop_pos,i] <- mean_B_val
-  kapa_hm_NB[start_pos:stop_pos,i] <- mean_NB_val
+  # assign mean_hm_val to the relevant positions in the kapa_hm and rename the column
+  # Create a new column in kapa_hm for the amino acid
   kapa_hm_E[start_pos:stop_pos,i] <- mean_E_val 
   kapa_hm_T[start_pos:stop_pos,i] <- mean_T_val 
   kapa_hm_M[start_pos:stop_pos,i] <- mean_M_val 
   kapa_hm_L[start_pos:stop_pos,i] <- mean_L_val 
+  kapa_hm_smd[start_pos:stop_pos,i] <- smd_val 
   
 }
-# Create a new column in beta_hm for the amino acid
-
 #extracts peptides names as list
-kapa_pep_name_B <- as.list(c("index","AAs","Avg_mean_B","count"))
-kapa_pep_name_B <- append(kapa_pep_name_B, data_filtered_kapa$Positions.in.Proteins)
+kapa_pep_name <- as.list(c("index",
+                          "AAs",
+                          "count",
+                          "avg_abs_E",
+                          "avg_abs_M",
+                          "avg_abs_L",
+                          "avg_abs_T",
+                          "avg_smd"))
 
-kapa_pep_name_NB <- as.list(c("index","AAs","Avg_mean_NB","count"))
-kapa_pep_name_NB <- append(kapa_pep_name_NB, data_filtered_kapa$Positions.in.Proteins)
 # count non-NA values in each row
-kapa_row_counts<- apply(kapa_hm_B, 1, function(x) sum(!is.na(x)))
+row_counts<- apply(kapa_hm_E, 1, function(x) sum(!is.na(x)))
 
 # compute row means, ignoring NA values
-kapa_row_means_B <- rowMeans(kapa_hm_B, na.rm = TRUE)
-kapa_row_means_NB <- rowMeans(kapa_hm_NB, na.rm = TRUE)
-kapa_row_means_E <- rowMeans(kapa_hm_E, na.rm = TRUE)
-kapa_row_means_T <- rowMeans(kapa_hm_T, na.rm = TRUE)
-kapa_row_means_M <- rowMeans(kapa_hm_M, na.rm = TRUE)
-kapa_row_means_L <- rowMeans(kapa_hm_L, na.rm = TRUE)
+row_means_E <- rowMeans(kapa_hm_E, na.rm = TRUE)
+row_means_T <- rowMeans(kapa_hm_T, na.rm = TRUE)
+row_means_M <- rowMeans(kapa_hm_M, na.rm = TRUE)
+row_means_L <- rowMeans(kapa_hm_L, na.rm = TRUE)
+row_means_smd <-rowMeans(kapa_hm_smd, na.rm = TRUE)
 
 #generate index
 index <- 1:length(kapa_fasta_seq)
-# adds counts, average, and fasta sequence
-kapa_hm_B<-cbind(index,kapa_fasta_seq,kapa_row_means_B,kapa_row_counts,kapa_hm_B)
-colnames(kapa_hm_B) <- kapa_pep_name_B
 
-kapa_hm_NB<-as.data.frame(cbind(index,kapa_fasta_seq,kapa_row_means_NB,kapa_row_counts,kapa_hm_NB))
-colnames(kapa_hm_NB) <- kapa_pep_name_NB
-kapa_hm_B<-as.data.frame(kapa_hm_B)
-kapa_hm_NB<-as.data.frame(kapa_hm_NB)
+#created merged fil for export
+merged_mh <-cbind(index,
+                  kapa_fasta_seq,
+                  row_counts,
+                  row_means_E,
+                  row_means_M,
+                  row_means_L,
+                  row_means_T,
+                  row_means_smd) 
+colnames(merged_mh) <- kapa_pep_name
 
-kapa_merged_mh <- merge(kapa_hm_NB[c(1:4)], kapa_hm_B,
-                       sort = FALSE)
-kapa_merged_mh <-kapa_merged_mh[c("index",
-                                "AAs",
-                                "count",
-                                "Avg_mean_NB",
-                                "Avg_mean_B")]
-kapa_merged_mh <-cbind(kapa_merged_mh,
-                      kapa_row_means_E,
-                      kapa_row_means_M,
-                      kapa_row_means_L,
-                      kapa_row_means_T) 
-kapa_merged_mh <-t(kapa_merged_mh)
-write.csv(kapa_merged_mh, "merged_dataframe_heatmap_kapa_casein.csv")
+merged_mh <-t(merged_mh)
+write.csv(merged_mh, "merged_dataframe_heatmap_kapa_casein.csv")
