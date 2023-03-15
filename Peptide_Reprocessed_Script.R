@@ -26,6 +26,7 @@ library(stringr)
 library(ggnewscale)
 library(tidyverse)
 library(ggtext)
+library(cowplot)
 
 ####Import raw data, creates important data frames############################## 
     # samdf = sample information,
@@ -632,6 +633,7 @@ for (i in 1:nrow(data_filtered)){
     data_filtered[i,"Protein"] <- as.character("other")
   }
 }
+
 #creates list of casein proteins 
 protein_list <- c("κ",
                   "αs1","αs2",
@@ -647,6 +649,10 @@ for (i in 1:nrow(data_filtered)){
     data_filtered[i,"Protein"] <- as.character("other")
   }
 }
+
+#creates data filter protein as factor for legend allignment
+data_filtered$Protein<-factor(data_filtered$Protein, levels = c("κ", "αs1","αs2", "β","βA1","βA2","other"))
+
 
 ####Bitter peptide candidate fold change precentage calculations################
 
@@ -703,14 +709,6 @@ VCP <- ggplot(data=data_filtered,
             vjust = "inward", 
             hjust = "inward",
             fontface=2)+
-  geom_text(x=8,
-                y=0,
-                size=4,
-                label=paste0("FC ratio: ",merged_protein_counts[counter,"pos_ratio"]),
-                vjust = "inward", 
-                hjust = "inward",
-                check_overlap = TRUE,
-                fontface=2)+
   geom_point(aes(color=factor(Protein)),
              size = ifelse(1:nrow(data_filtered) <= 12, 3.5, 1.5),
              alpha = ifelse(data_filtered$Protein == Pro_highlighted, 1, 0))+
@@ -728,7 +726,7 @@ VCP <- ggplot(data=data_filtered,
                   data_filtered$Positions.in.Proteins %in% grp_top_12 & data_filtered$Protein %in% Pro_highlighted),
     aes(label = paste0(ROM_order,") ",Positions.in.Proteins)),
 #    vjust = "outward", 
-#    hjust = "outward",           
+#    hjust = "inward",           
     direction = "both",
     color = "black",
     nudge_x =.1,
@@ -741,22 +739,49 @@ assign(str_c("VCP_", protein_list[counter]),VCP)
 print(str_c("VCP_", protein_list[counter]))
 }
 
+#creates plot for extracting legend from of fold change for combined volcano plot
+VCP_legend<-ggplot(data = subset(data_filtered, data_filtered$Protein %in% protein_list),
+            aes(x=logfoldchange,
+                y=logpvalue))+
+  labs(color = "Fold change ratio") +
+  theme(legend.text = element_text(size=12),
+    legend.title = element_text(size=12, face=2))+
+  ####################protein legend
+  geom_point(aes(colour = factor(Protein)))+
+  scale_color_manual(
+    values=c(κ="#0d0404",
+             αs1="#baccdd",
+             αs2="#517fab",
+             β="#950a11",
+             βA1="#f06625",
+             βA2="yellow2"),
+    labels=c("κ = 1.3",
+             "αs1 = 0.1",
+             "αs2 = 1.0",
+             "β = 1.1",
+             "βA1 = 4.3",
+             "βA2 = 1.3"))
+    
+# create a combined legend extracted from VCP_legend
+legend <- get_legend(VCP_legend + theme(legend.position = "right"))
+
+# create a combined plot of the six volcano plots
+combined_VCP<-grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2, left=paste("-Log(p-value)"), bottom="Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
+
 png("Volcano_Plot_Combined.png",
-    width = 900,
-    height = 540)
-#grid.arrange(LRB,LRNB, ncol=2,bottom=textGrob("Cheese mean bitterness score", gp=gpar(fontsize=12, face="bold")))
-grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2, left=paste("-Log(p-value)"),right="", bottom="Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
-#grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2)
+    width = 1000,
+    height = 500)
+grid.arrange(combined_VCP, right=legend)
 dev.off()
 
-
+  
 ####################Combined Volcano Plot#######################################
 VCP<-ggplot(data=data_filtered,
        aes(x=logfoldchange,
            y=logpvalue,
            label = Positions.in.Proteins)) +
   theme_bw()+
-    xlab("Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)") +
+  xlab("Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)") +
   ylab("-Log10(p-value)") +
   xlim(-12.5, 12.5) +
   labs(color = "Peptide's origin") +
@@ -1018,7 +1043,6 @@ write.csv(merged_mh, "merged_dataframe_heatmap_as1_casein.csv")
 
 
 ########################as2 heat map abundance##################################
-
 #subests all as2-casein into seperate dataframe
 data_filtered_as2 <- data_filtered[grepl("\\b(αs2)\\b", data_filtered$Positions.in.Proteins), ]
 
