@@ -13,7 +13,9 @@ install.packages("stringr")
 install.packages("tidyverse")
 install.packages("ggtext")
 install.packages("ggrepel")
+install.packages("viridis") 
 
+library(viridi)  
 library(gtools)
 library(dplyr)
 library(matrixStats)
@@ -334,23 +336,23 @@ for (i in 1:nrow(data_filtered)) {
                      "SMD:",
                      data_filtered[i,'stand_diff_mean']),
           xlab="bitterness grouping",
-          ylab="Relative abundance") 
+          ylab="Normalized abundance") 
   
   #creates internal matrix for bar plot
   dat <- matrix(data_filtered[i,sample_list_ANI],1,14) 
   colnames(dat) <- sample_names_ext_rename 
-  #generates bar plot showing relative abundance for each sample
+  #generates bar plot showing normalized abundance for each sample
   barplot(dat, 
-          main="Relative abundance bar plot",
+          main="normalized abundance bar plot",
           xlab="Sample ID" ,
           ylab="Relative abundance",
           cex.names=.5) 
   
-  #creates scatter plot with correlation age of relative abundance to age
+  #creates scatter plot with correlation age of normalized abundance to age
   lm_A <- lm(a ~ age,data=data_cor)
   plot(samdf$age,data_filtered[i,sample_list_ANI],
        xlab="Cheese Age (years)",
-       ylab="Relative abundance",
+       ylab="Normalized abundance",
        main=paste("Relative abundance vs. cheese age",
                   "corr=",
                   round(cor_A,3)))
@@ -360,8 +362,8 @@ for (i in 1:nrow(data_filtered)) {
   lm_B <- lm(a ~ b,data=data_cor)
   plot(samdf$MBI,data_filtered[i,sample_list_ANI],
        xlab="Mean bitterness score",
-       ylab="Relative abundance",
-       main=paste("Relative abundance vs. cheese bitterness",
+       ylab="Normalized abundance",
+       main=paste("normalized abundance vs. cheese bitterness",
                   "corr=",round(cor_B,3)))
   abline(lm_B)
 }
@@ -511,15 +513,17 @@ top_12 <- head(data_filtered, n=12)[,!(names(top_12) %in% c("Theo.MHplus.in.Da",
                                                             "Cor_order", 
                                                             "ROM",
                                                             "foldchange"))]
-
-
+#adds bitterness intensity values (0-15 scale) for top 12 peptides to top_12
+top_12$peptide_MBI<-c(10.2, 0, 2.3, 12.6, 0, 0, 9.7, 1.9, 0,  0, 7.3, 13.6)
+peptide_MBI_list<-c(10.2, 0, 2.3, 12.6, 0, 0, 9.7, 1.9, 0,  0, 7.3, 13.6)
 ####Bitter peptide candidate categorical charts data crunching##################
 #creates empty dataframe top_12_t for a box plot
 columns = c("combined_sequence",
             "Positions.in.Proteins",
             "ANI",
             "Grp",
-            "MBI")
+            "MBI",
+            "peptide_MBI")
 top_12_t <- data.frame(matrix(nrow = 0, ncol = length(columns)))
 colnames(top_12_t) = columns                        
 
@@ -531,6 +535,8 @@ for (t12p in 1:nrow(top_12)){
     top_12_t[next_row,"combined_sequence"] <- top_12[t12p,"combined_sequence"]    
     top_12_t[next_row,"ANI"] <- top_12[t12p,paste0("ANI.",samdf[counter,'sample_names'])]
     top_12_t[next_row,"MBI"] <- samdf[counter,'MBI']
+    top_12_t[next_row,"peptide_MBI"] <- top_12[t12p,"peptide_MBI"]    
+    
     grpID <- paste0("ANI:",samdf[counter,'sample_names'])
     #creates groups "T_L" and "M_E" for representing bitter and non-bitter groups
     if (grpID %in% nb_sample_list){
@@ -543,29 +549,55 @@ for (t12p in 1:nrow(top_12)){
   }
   counter <- 1
 }
+#creates factor for box plot
 top_12_t$Grp <- factor(top_12_t$Grp, levels=c('T_L','M_E'))
 
+#creates position in protein as factor for x-axis ordering
+top_12_t$Positions.in.Proteins<-factor(top_12_t$Positions.in.Proteins, levels = c("β [60-65]",
+                                                                                  "κ [97-103]",
+                                                                                  "αs1 [180-187]",
+                                                                                  "βA2 [60-68]",
+                                                                                  "β [73-79]",
+                                                                                  "β [198-205]",
+                                                                                  "β [165-189]",
+                                                                                  "β [111-116]",
+                                                                                  "β [145-156]",
+                                                                                  "αs1 [181-190]",
+                                                                                  "βA1 [60-69]*",
+                                                                                  "βA1 [60-69]"))
+# Create a variable for the face argument using ifelse()
+font_face <- list(ifelse(top_12_t$peptide_MBI >= 7.3, "bold", "plain"))
+####Bitter peptide candidate  box plot##########################################
 
-####Bitter peptide candidate box plot###########################################
 #generates box plot
 Box<-ggplot(data=top_12_t,
             aes(x=Positions.in.Proteins,
                 y=log10(ANI),
-                fill=factor(Grp)),) +
-  geom_boxplot()+
+                fill=factor(Grp))) +
+  geom_boxplot(aes(alpha = peptide_MBI >= 7.3))+
+  scale_alpha_manual(values = c(0.1, 1),
+                     guide = FALSE)+
   xlab(NULL)+
   xlab("Selected top 12 bitter peptide candidates") +
-  ylab("Log10 (Relative abundance)") +
+  ylab("Log10 (normalized abundance)") +
   labs(fill = "Categorical grouping") +
   scale_fill_manual(labels =c("Non-bitter","Bitter"),
                     values=c("#0096FF", "#FFA500")) +
   scale_y_continuous(breaks=c(4,5,6,7,8,9,10))+
-#                     limits = c(2.75, 10))+
-  geom_text(x=1.0,
-            y=10,
-            size=12,
-            label="A",
-            check_overlap = TRUE)+
+  scale_x_discrete(
+    label=c(expression(bold("β [60-65]")),
+            "κ [97-103]",
+            "αs1 [180-187]",
+            expression(bold("βA2 [60-68]")),
+            "β [73-79]",
+            "β [198-205]",
+            expression(bold("β [165-189]")),
+            "β [111-116]",
+            "β [145-156]",
+            "αs1 [181-190]",
+            expression(bold("βA1 [60-69]*")),
+            expression(bold("βA1 [60-69]"))))+
+
   theme(
     legend.justification=c(1,0),
     legend.position = c(0.9975,0.01),
@@ -579,7 +611,7 @@ Box<-ggplot(data=top_12_t,
                                vjust = 0.5,
                                hjust=1),
     axis.text.y = element_text(size=12))+
-    guides(fill = guide_legend(ncol = 2))    
+    guides(fill = guide_legend(ncol = 1, title = "Catagorical\ngrouping"))    
 
 png("Box_Plot.png",
     width = 900,
@@ -587,19 +619,38 @@ png("Box_Plot.png",
 grid.arrange(Box)
 dev.off()
 
-
 ####Bitter peptide candidate linear regression##################################
 LR <-ggplot(data=top_12_t,
             aes(x = MBI,
-                y = log10(ANI))) +
-  geom_point(aes(color=factor(Positions.in.Proteins)))+
-  geom_smooth(method=lm,
-              se=FALSE,
-              aes(color=factor(Positions.in.Proteins))) +
-  xlab("Selected top 12 bitter peptide candidates") +
-  ylab("Log10 (Relative abundance)") +
+                y = log10(ANI)))+
+  geom_point(aes(color=factor(Positions.in.Proteins),
+                 alpha = peptide_MBI >= 7.3))+
+  geom_line(stat="smooth", method = "lm",
+              aes(color=factor(Positions.in.Proteins),
+                  alpha = peptide_MBI >= 7.3),
+            linewidth = 1)+
+  scale_alpha_manual(values = c(0.2, 1),
+                     guide = FALSE)+
+  xlab("Bitterness intensity of cheese samples") +
+  ylab("Log10 (normalized abundance)") +
   labs(color = "Peptides") +
-  geom_text(x=0.5,
+   scale_color_manual(
+    values = c("#88CCEE","#CC6677", "#117733", "#DDCC77", 
+               "#332288", "#AA4499", "#44AA99", "#999933",
+               "#882255", "#661100", "#6699CC","#888888"),
+    labels=c(expression(bold("β [60-65]")),
+           "κ [97-103]",
+           "αs1 [180-187]",
+           expression(bold("βA2 [60-68]")),
+           "β [73-79]",
+           "β [198-205]",
+           expression(bold("β [165-189]")),
+           "β [111-116]",
+           "β [145-156]",
+           "αs1 [181-190]",
+           expression(bold("βA1 [60-69]*")),
+           expression(bold("βA1 [60-69]"))))+
+    geom_text(x=0.5,
             y=10,
             size=12,
             label="A",
@@ -609,18 +660,25 @@ LR <-ggplot(data=top_12_t,
   theme(
     legend.justification=c(1,-0.02),
     legend.position = c(.998,0),
-    legend.text = element_text(size=12),
+    legend.text = element_text(size=12,
+                               hjust=0),
     legend.title = element_text(size=12),
     axis.text.x = element_text(size=12))+
-  guides(color = guide_legend(ncol = 5, title.position = "top"))
-
+  guides(color = guide_legend(ncol = 5,
+                              title.position = "top",
+         override.aes = list(alpha = c(1, 0.2, 0.2, 1, 0.2, 0.2, 1, 0.2, 0.2, 0.2, 1, 1))))
+                             
 png("LR.png",
     width = 900,
     height = 450)
 grid.arrange(LR)
 dev.off()
 
-
+png("LR and Box plot.png",
+    width = 900,
+    height = 900)
+grid.arrange(LR, Box)
+dev.off()
 ####Bitter peptide candidate Volcano Plots Data Processing######################
 #loop that creates separate protein column by stripping Positions.in.proteins
 data_filtered$Protein<- NA
@@ -650,11 +708,11 @@ for (i in 1:nrow(data_filtered)){
   }
 }
 
-#creates data filter protein as factor for legend allignment
+#creates data filter protein as factor for legend alignment
 data_filtered$Protein<-factor(data_filtered$Protein, levels = c("κ", "αs1","αs2", "β","βA1","βA2","other"))
 
 
-####Bitter peptide candidate fold change precentage calculations################
+####Bitter peptide candidate fold change percentage calculations################
 
 #list of top 12 peptides for manual reference 
 grp_top_12 <- unique(top_12_t$Positions.in.Proteins)
@@ -700,7 +758,7 @@ VCP <- ggplot(data=data_filtered,
   xlim(-7.5, 7.5) +
   ylim(-0.1,4) +
   geom_hline(yintercept = 1.3,
-             linetype='dotted',
+             linetype= 4,
              col = 'red')+
   geom_richtext(x=-8,
             y=4,
@@ -732,6 +790,7 @@ VCP <- ggplot(data=data_filtered,
     nudge_x =.1,
     nudge_y = .1,
     size = 4,
+    fontface = "bold",  # Add this line to make the font bold
     box.padding = unit(.5, "lines"),
     point.padding = unit(.5, "lines"))
 
@@ -766,7 +825,7 @@ VCP_legend<-ggplot(data = subset(data_filtered, data_filtered$Protein %in% prote
 legend <- get_legend(VCP_legend + theme(legend.position = "right"))
 
 # create a combined plot of the six volcano plots
-combined_VCP<-grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2, left=paste("-Log(p-value)"), bottom="Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
+combined_VCP<-grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2, left=paste("-Log(p-value)"), bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
 
 png("Volcano_Plot_Combined.png",
     width = 1000,
@@ -776,19 +835,38 @@ dev.off()
 
   
 ####################Combined Volcano Plot#######################################
+#creates a list of labels to highlight the selected bitter peptides
+ROM_order_list <- c(expression(bold("1")),
+                    "2",
+                    "3",
+                    expression(bold("4")),
+                    "5",
+                    "6",
+                    expression(bold("7")),
+                    "8",
+                    "9",
+                    "10",
+                    expression(bold("11")),
+                    expression(bold("12")))
 VCP<-ggplot(data=data_filtered,
        aes(x=logfoldchange,
            y=logpvalue,
            label = Positions.in.Proteins)) +
   theme_bw()+
-  xlab("Log2 Fold Change (relative abundance of threshold & low vs. moderate & extreme bitterness sample grouping)") +
+  xlab("Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)") +
   ylab("-Log10(p-value)") +
   xlim(-12.5, 12.5) +
   labs(color = "Peptide's origin") +
   ylim(-0.1,4) +
   geom_point(aes(colour=Protein))+
+  geom_text(x=-12.5,
+            y=1.4,
+            size=4.5,
+            label="P-value > 0.05",
+            check_overlap = TRUE,
+            col = "red")+
   geom_hline(yintercept = 1.3,
-             linetype='dotted',
+             linetype= 4,
              col = 'red')+
   theme(
     legend.justification=c(1,-0.02),
@@ -797,6 +875,7 @@ VCP<-ggplot(data=data_filtered,
     legend.title = element_text(size=12),
     axis.text.x = element_text(size=12),
     axis.title.y = element_text(size=12))+
+  #theme(legend.text = element_markdown())+
   ####################protein legend
   geom_point(aes(colour = Protein),
              size = ifelse(1:nrow(data_filtered) <= 12, 3.5, 1.5))+
@@ -817,18 +896,18 @@ VCP<-ggplot(data=data_filtered,
              data = subset(data_filtered, 
                            data_filtered$Positions.in.Proteins %in% grp_top_12))+
   scale_color_manual(
-    labels=c("1) β [60-65]",
+    labels=c(expression(bold("1) β [60-65]")),
              "2) κ [97-103]",
              "3) αs1 [180-187]",
-             "4) βA2 [60-68]",
+             expression(bold("4) βA2 [60-68]")),
              "5) β [73-79]",
              "6) β [198-205]",
-             "7) β [165-189]",
+             expression(bold("7) β [165-189]")),
              "8) β [111-116]",
              "9) β [145-156]",
              "10) αs1 [181-190]",
-             "11) βA1 [60-69]*",
-             "12) βA1 [60-69]"),
+             expression(bold("11) βA1 [60-69]*")),
+             expression(bold("12) βA1 [60-69]"))),
     values=c("1) β [60-65]"="#950a11",
              "2) κ [97-103]"="#0d0404",
              "3) αs1 [180-187]"="#baccdd",
@@ -843,28 +922,29 @@ VCP<-ggplot(data=data_filtered,
              "12) βA1 [60-69]"="#f06625"))+
   theme(legend.key=element_rect(fill="white",
                                 color = "white"))+
-  guides(colour=guide_legend(override.aes=list(color="white"),
+  guides(colour=guide_legend(title = "Bitter peptide\ncandidates",
+                             override.aes=list(color="white"),
                              label.hjust	= 0,
                              label.position = "left"))+
   geom_text_repel(
     data = subset(data_filtered,
                   data_filtered$Positions.in.Proteins %in% grp_top_12),
-    aes(label = ROM_order),
+    label = ROM_order_list,
     direction = "both",
     nudge_x =.1,
     nudge_y = .1,
-    size = 4,
-    box.padding = unit(.5, "lines"),
-    point.padding = unit(.5, "lines"))
+    size = 4)#,
+   # box.padding = unit(.5, "lines"),
+    #point.padding = unit(.5, "lines"))
 
 png("Volcano_Plot.png",
-    width = 900,
-    height = 450)
+    width = 1000,
+    height = 500)
 grid.arrange(VCP)
 dev.off()
 
 ########################beta heat map abundance#################################
-#subests all beta-casein into seperate dataframe
+#subsets all beta-casein into separate dataframe
 data_filtered_beta <- data_filtered[grepl("\\b(β|βA1|βA2)\\b", data_filtered$Positions.in.Proteins), ]
 
 #betaA1 fasta seq to list
@@ -1222,3 +1302,16 @@ colnames(merged_mh) <- kapa_pep_name
 
 merged_mh <-t(merged_mh)
 write.csv(merged_mh, "merged_dataframe_heatmap_kapa_casein.csv")
+
+
+########################summary of heat maps##e#################################
+dim(data_filtered_as1)[1]
+      #[1] 166
+dim(data_filtered_as2)[1]
+      #[1] 112
+dim(data_filtered_beta)[1]
+      #[1] 533
+dim(data_filtered_kapa)[1]
+      #[1] 35
+166+112+533+35
+      #[1] 846
