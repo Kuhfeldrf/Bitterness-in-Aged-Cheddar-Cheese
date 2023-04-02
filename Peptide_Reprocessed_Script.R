@@ -13,9 +13,7 @@ install.packages("stringr")
 install.packages("tidyverse")
 install.packages("ggtext")
 install.packages("ggrepel")
-install.packages("viridis") 
-
-library(viridi)  
+  
 library(gtools)
 library(dplyr)
 library(matrixStats)
@@ -717,6 +715,9 @@ data_filtered$Protein<-factor(data_filtered$Protein, levels = c("κ", "αs1","α
 #list of top 12 peptides for manual reference 
 grp_top_12 <- unique(top_12_t$Positions.in.Proteins)
 
+#list of top 5 peptides for manual reference 
+grp_top_5 <- as.character(unique(top_12_t$Positions.in.Proteins[top_12_t$peptide_MBI >= 7.3]))
+
 #group the data_filtered data frame by protein
 grouped_data <- group_by(data_filtered, Protein)
 
@@ -756,14 +757,15 @@ VCP <- ggplot(data=data_filtered,
   xlab(NULL)+
   ylab(NULL)+
   xlim(-7.5, 7.5) +
-  ylim(-0.1,4) +
+  ylim(-0.1,4.05) +
   geom_hline(yintercept = 1.3,
              linetype= 4,
              col = 'red')+
-  geom_richtext(x=-8,
+  geom_richtext(x=8,
             y=4,
             size=4,
-            label=paste0(abc_list[counter],") ",protein_list[counter],"-casein"),
+            #label=paste0(abc_list[counter],") ",protein_list[counter],"-casein"),
+            label=paste0(protein_list[counter],"-casein"),
             vjust = "inward", 
             hjust = "inward",
             fontface=2)+
@@ -779,18 +781,37 @@ VCP <- ggplot(data=data_filtered,
                κ="#0d0404",
                other="#7F7F7F"))+
   theme(legend.position="none")+
-  geom_text_repel(
+  #code for top 5 bitter peptide candidates(bold fontface)
+    geom_text(
     data = subset(data_filtered,
-                  data_filtered$Positions.in.Proteins %in% grp_top_12 & data_filtered$Protein %in% Pro_highlighted),
-    aes(label = paste0(ROM_order,") ",Positions.in.Proteins)),
+                  data_filtered$Positions.in.Proteins %in% grp_top_5 & data_filtered$Protein %in% Pro_highlighted),
+#    aes(label = paste0(ROM_order,") ",Positions.in.Proteins)),
+    aes(label = ROM_order),    direction = "both",
+    color = "black",
+    nudge_x =.4,
+    nudge_y = .2,
+    size = 4,
+    fontface = "bold",
+    box.padding = unit(.5, "lines"),
+    point.padding = unit(.5, "lines"))+
+
+#code for bitter peptide candidates that are not in the top 5 (plain fontface)
+    geom_text(
+    data = subset(data_filtered,
+                  data_filtered$Positions.in.Proteins %in% grp_top_12 & 
+                    data_filtered$Protein %in% Pro_highlighted &
+                    !(data_filtered$Positions.in.Proteins %in% grp_top_5)),
+#    aes(label = paste0(ROM_order,") ",Positions.in.Proteins)),
+    aes(label = ROM_order),
+    
 #    vjust = "outward", 
 #    hjust = "inward",           
     direction = "both",
     color = "black",
-    nudge_x =.1,
-    nudge_y = .1,
+    nudge_x =.3,
+    nudge_y = .2,
     size = 4,
-    fontface = "bold",  # Add this line to make the font bold
+    fontface = "plain",
     box.padding = unit(.5, "lines"),
     point.padding = unit(.5, "lines"))
 
@@ -798,15 +819,37 @@ assign(str_c("VCP_", protein_list[counter]),VCP)
 print(str_c("VCP_", protein_list[counter]))
 }
 
-#creates plot for extracting legend from of fold change for combined volcano plot
-VCP_legend<-ggplot(data = subset(data_filtered, data_filtered$Protein %in% protein_list),
+#####creates plot for extracting legend from of fold change for combined volcano plot####
+VCP_legend<-ggplot(data = data_filtered,
             aes(x=logfoldchange,
                 y=logpvalue))+
-  labs(color = "Fold change ratio") +
+ 
   theme(legend.text = element_text(size=12),
     legend.title = element_text(size=12, face=2))+
   ####################protein legend
   geom_point(aes(colour = factor(Protein)))+
+  ####################protein legend
+  geom_point(aes(colour = Protein))+
+    labs(color = "Peptide's origin") +
+  scale_color_manual(
+    values=c(β="#950a11",
+             βA1="#f06625",
+             βA2="yellow2",
+             αs1="#baccdd",
+             αs2="#517fab", ##517fab
+             κ="#0d0404",
+             other="#481567FF"),
+    labels=c("κ-casein",
+             "αs1-casein",
+             "αs2-casein",
+             "β-casein",
+             "βA1-casein",
+             "βA2-casein",
+             "other"))+
+
+  ggnewscale::new_scale_colour() + 
+  geom_point(aes(colour = Protein))+
+    labs(color = "Fold change ratio") +
   scale_color_manual(
     values=c(κ="#0d0404",
              αs1="#baccdd",
@@ -819,75 +862,8 @@ VCP_legend<-ggplot(data = subset(data_filtered, data_filtered$Protein %in% prote
              "αs2 = 1.0",
              "β = 1.1",
              "βA1 = 4.3",
-             "βA2 = 1.3"))
-    
-# create a combined legend extracted from VCP_legend
-legend <- get_legend(VCP_legend + theme(legend.position = "right"))
+             "βA2 = 1.3"))+
 
-# create a combined plot of the six volcano plots
-combined_VCP<-grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2, left=paste("-Log(p-value)"), bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
-
-png("Volcano_Plot_Combined.png",
-    width = 1000,
-    height = 500)
-grid.arrange(combined_VCP, right=legend)
-dev.off()
-
-  
-####################Combined Volcano Plot#######################################
-#creates a list of labels to highlight the selected bitter peptides
-ROM_order_list <- c(expression(bold("1")),
-                    "2",
-                    "3",
-                    expression(bold("4")),
-                    "5",
-                    "6",
-                    expression(bold("7")),
-                    "8",
-                    "9",
-                    "10",
-                    expression(bold("11")),
-                    expression(bold("12")))
-VCP<-ggplot(data=data_filtered,
-       aes(x=logfoldchange,
-           y=logpvalue,
-           label = Positions.in.Proteins)) +
-  theme_bw()+
-  xlab("Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)") +
-  ylab("-Log10(p-value)") +
-  xlim(-12.5, 12.5) +
-  labs(color = "Peptide's origin") +
-  ylim(-0.1,4) +
-  geom_point(aes(colour=Protein))+
-  geom_text(x=-12.5,
-            y=1.4,
-            size=4.5,
-            label="P-value > 0.05",
-            check_overlap = TRUE,
-            col = "red")+
-  geom_hline(yintercept = 1.3,
-             linetype= 4,
-             col = 'red')+
-  theme(
-    legend.justification=c(1,-0.02),
-    legend.position = c(.998,0),
-    legend.text = element_text(size=12),
-    legend.title = element_text(size=12),
-    axis.text.x = element_text(size=12),
-    axis.title.y = element_text(size=12))+
-  #theme(legend.text = element_markdown())+
-  ####################protein legend
-  geom_point(aes(colour = Protein),
-             size = ifelse(1:nrow(data_filtered) <= 12, 3.5, 1.5))+
-  scale_color_manual(
-    values=c(β="#950a11",
-             βA1="#f06625",
-             βA2="yellow2",
-             αs1="#baccdd",
-             αs2="#517fab", ##517fab
-             κ="#0d0404",
-             other="#7F7F7F"))+
-  #################Top_12 legend
   ggnewscale::new_scale_colour() + 
   labs(color = "Selected peptides") +
   geom_point(aes(colour = paste0(ROM_order,
@@ -925,6 +901,132 @@ VCP<-ggplot(data=data_filtered,
   guides(colour=guide_legend(title = "Bitter peptide\ncandidates",
                              override.aes=list(color="white"),
                              label.hjust	= 0,
+                             label.position = "left"))  
+
+# create a combined legend extracted from VCP_legend
+legend <- get_legend(VCP_legend + theme(legend.position = "right"))
+
+
+#####prints combined volcano plot################################################
+# create a combined plot of the six volcano plots
+combined_VCP<-grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2)
+#, left=paste("-Log(p-value)"), bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
+
+png("Volcano_Plot_2x_Combined.png",
+    width = 1000,
+    height = 1000)
+grid.arrange(VCP_one, combined_VCP,
+             nrow=2,
+             right=legend,
+             left="-Log(p-value)", 
+             bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
+dev.off()
+
+# Save plot to file with modified labels
+png("Volcano_Plot_2x_Combined.png", width = 1000, height = 1000)
+grid.arrange(VCP_one, combined_VCP,
+             nrow=2,
+             right=legend,
+             left="-Log(p-value)",
+             bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
+dev.off()
+####################Combined Volcano Plot#######################################
+#creates a list of labels to highlight the selected bitter peptides
+ROM_order_list <- c(expression(bold("1")),
+                    "2",
+                    "3",
+                    expression(bold("4")),
+                    "5",
+                    "6",
+                    expression(bold("7")),
+                    "8",
+                    "9",
+                    "10",
+                    expression(bold("11")),
+                    expression(bold("12")))
+
+#Generates combined volcano plot
+VCP_one<-ggplot(data=data_filtered,
+       aes(x=logfoldchange,
+           y=logpvalue,
+           label = Positions.in.Proteins)) +
+  theme_bw()+
+  xlab("Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)") +
+  ylab("-Log10(p-value)") +
+  xlim(-12.5, 12.5) +
+  labs(color = "Peptide's origin") +
+  ylim(-0.1,4) +
+  geom_point(aes(colour=Protein))+
+  geom_text(x=-12.25,
+            y=1.4,
+            size=4.5,
+            label="P-value > 0.05",
+            check_overlap = TRUE,
+            col = "red")+
+  geom_hline(yintercept = 1.3,
+             linetype= 4,
+             col = 'red')+
+  theme(
+    legend.justification=c(1,-0.02),
+    #legend.position = c(.998,0),
+    legend.position = "none",
+    legend.text = element_text(size=12),
+    legend.title = element_text(size=12),
+    axis.text.x = element_text(size=12),
+    axis.text.y = element_text(size=12),
+    axis.title.x = element_blank(),#element_text(size=12))+
+    axis.title.y = element_blank())+#element_text(size=12))+
+    
+  #theme(legend.text = element_markdown())+
+  ####################protein legend
+  geom_point(aes(colour = Protein),
+             size = ifelse(1:nrow(data_filtered) <= 12, 3.5, 1.5))+
+  scale_color_manual(
+    values=c(β="#950a11",
+             βA1="#f06625",
+             βA2="yellow2",
+             αs1="#baccdd",
+             αs2="#517fab", ##517fab
+             κ="#0d0404",
+             other="#481567FF"))+
+  #################Top_12 legend
+  ggnewscale::new_scale_colour() + 
+  labs(color = "Selected peptides") +
+  geom_point(aes(colour = paste0(ROM_order,
+                                 ") ",
+                                 Positions.in.Proteins)),
+             data = subset(data_filtered, 
+                           data_filtered$Positions.in.Proteins %in% grp_top_12))+
+  scale_color_manual(
+    labels=c(expression(bold("1) β [60-65]")),
+             "2) κ [97-103]",
+             "3) αs1 [180-187]",
+             expression(bold("4) βA2 [60-68]")),
+             "5) β [73-79]",
+             "6) β [198-205]",
+             expression(bold("7) β [165-189]")),
+             "8) β [111-116]",
+             "9) β [145-156]",
+             "10) αs1 [181-190]",
+             expression(bold("11) βA1 [60-69]*")),
+             expression(bold("12) βA1 [60-69]"))),
+    values=c("1) β [60-65]"="#950a11",
+             "2) κ [97-103]"="#0d0404",
+             "3) αs1 [180-187]"="#baccdd",
+             "4) βA2 [60-68]"="yellow2",
+             "5) β [73-79]"="#950a11",
+             "6) β [198-205]"="#950a11",
+             "7) β [165-189]"="#950a11",
+             "8) β [111-116]"="#950a11",
+             "9) β [145-156]"="#950a11",
+             "10) αs1 [181-190]"="#baccdd",
+             "11) βA1 [60-69]*"="#f06625",
+             "12) βA1 [60-69]"="#f06625"))+
+  theme(legend.key=element_rect(fill="white",color = "white"),
+        legend.position = "none")+
+  guides(colour=guide_legend(title = "Bitter peptide\ncandidates",
+                             override.aes=list(color="white"),
+                             label.hjust	= 0,
                              label.position = "left"))+
   geom_text_repel(
     data = subset(data_filtered,
@@ -940,7 +1042,7 @@ VCP<-ggplot(data=data_filtered,
 png("Volcano_Plot.png",
     width = 1000,
     height = 500)
-grid.arrange(VCP)
+grid.arrange(VCP_one)
 dev.off()
 
 ########################beta heat map abundance#################################
