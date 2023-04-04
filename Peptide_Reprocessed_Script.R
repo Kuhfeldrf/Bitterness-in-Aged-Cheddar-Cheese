@@ -2,6 +2,7 @@
 options( scipen = 1 )
 options( digits = 5 )
 
+
 ####Install and load required packages##########################################
 install.packages("gridExtra")
 install.packages("gtools")
@@ -12,13 +13,11 @@ install.packages("dplyr")
 install.packages("stringr")
 install.packages("tidyverse")
 install.packages("ggtext")
-install.packages("ggrepel")
-  
+
 library(gtools)
 library(dplyr)
 library(matrixStats)
 library(ggplot2) 
-library(ggrepel)
 library(tidyr)
 library(Matrix)
 library(gridExtra)
@@ -27,6 +26,7 @@ library(ggnewscale)
 library(tidyverse)
 library(ggtext)
 library(cowplot)
+
 
 ####Import raw data, creates important data frames############################## 
     # samdf = sample information,
@@ -131,6 +131,7 @@ datarn$count <- NA
 for (i in 1:nrow(datarn)){
   datarn[i,'count'] <- (sum(c(datarn[i,grep("^ADI.",data1_names_new)] == "Det")))
 }
+
 
 ####Q value Function####
 #uses ney 1979 formula for determining hydrophobicity or Q-value of a peptide based on free energy transfer of amino acids which are the lines below assigning amino acids there energy transfer value
@@ -273,6 +274,7 @@ for (i in 1:nrow(datarn))  {
     datarn[i,"Positions.in.Proteins"] <- paste0(datarn[i,"Positions.in.Proteins"],"*")    
   }
 }
+
 
 ####Filters out data based on count, molecular weight and Q-value###############
 #to reduce possible bitter peptide candidates to only those peptides with enough instrument data and literature based molecular weight and Q-value section criteria
@@ -494,7 +496,8 @@ options(scipen = -1, digits = 2); View(data_filtered_final)
 ####short list of bitter peptide candidates#####################################
 #selects top 12 bitter peptide candidates based on rank order mean
 
-top_12 <- head(data_filtered, n=12)[,!(names(top_12) %in% c("Theo.MHplus.in.Da",
+#generates new dataframe with select columns
+top_12 <- head(data_filtered, n=12)[,!(names(data_filtered) %in% c("Theo.MHplus.in.Da",
                                                             "Sequence.Length",
                                                             "Theo.MHplus.in.Da",
                                                             "Top.Apex.RT.in.min",
@@ -509,8 +512,7 @@ top_12 <- head(data_filtered, n=12)[,!(names(top_12) %in% c("Theo.MHplus.in.Da",
                                                             "pvalue",
                                                             "SMD_order",
                                                             "Cor_order", 
-                                                            "ROM",
-                                                            "foldchange"))]
+                                                            "ROM"))]
 #adds bitterness intensity values (0-15 scale) for top 12 peptides to top_12
 top_12$peptide_MBI<-c(10.2, 0, 2.3, 12.6, 0, 0, 9.7, 1.9, 0,  0, 7.3, 13.6)
 peptide_MBI_list<-c(10.2, 0, 2.3, 12.6, 0, 0, 9.7, 1.9, 0,  0, 7.3, 13.6)
@@ -522,9 +524,12 @@ columns = c("combined_sequence",
             "Grp",
             "MBI",
             "peptide_MBI")
+
+#creates new dataframe with transposed data
 top_12_t <- data.frame(matrix(nrow = 0, ncol = length(columns)))
 colnames(top_12_t) = columns                        
 
+#populates new dataframe and adds groups "Grp" for threshold and low = "T_L" and moderate and extreme = "M_E"
 counter <- 1
 for (t12p in 1:nrow(top_12)){
   while (counter <=nrow(samdf)) {
@@ -563,10 +568,9 @@ top_12_t$Positions.in.Proteins<-factor(top_12_t$Positions.in.Proteins, levels = 
                                                                                   "αs1 [181-190]",
                                                                                   "βA1 [60-69]*",
                                                                                   "βA1 [60-69]"))
-# Create a variable for the face argument using ifelse()
-font_face <- list(ifelse(top_12_t$peptide_MBI >= 7.3, "bold", "plain"))
-####Bitter peptide candidate  box plot##########################################
 
+
+####Bitter peptide candidate  box plot##########################################
 #generates box plot
 Box<-ggplot(data=top_12_t,
             aes(x=Positions.in.Proteins,
@@ -576,7 +580,7 @@ Box<-ggplot(data=top_12_t,
   scale_alpha_manual(values = c(0.1, 1),
                      guide = FALSE)+
   xlab(NULL)+
-  xlab("Selected top 12 bitter peptide candidates") +
+  xlab("Bitter peptide candidates") +
   ylab("Log10 (normalized abundance)") +
   labs(fill = "Categorical grouping") +
   scale_fill_manual(labels =c("Non-bitter","Bitter"),
@@ -595,27 +599,33 @@ Box<-ggplot(data=top_12_t,
             "αs1 [181-190]",
             expression(bold("βA1 [60-69]*")),
             expression(bold("βA1 [60-69]"))))+
-
+  geom_text(x=1,
+            y=10,
+            size=16,
+            label="B",
+            check_overlap = TRUE)+
   theme(
     legend.justification=c(1,0),
     legend.position = c(0.9975,0.01),
-    legend.text = element_text(size=10),
-    legend.title = element_text(size=12),
-    axis.title.x = element_text(size=12),
-    axis.title.y = element_text(size=12),
-    axis.text.x = element_text(size=12,
+    legend.text = element_text(size=16,),
+    legend.title = element_text(size=16),
+    axis.title.x = element_text(size=16),
+    axis.title.y = element_text(size=16),
+    axis.text.x = element_text(size=16,
                                colour="black",
                                angle = 90,
                                vjust = 0.5,
                                hjust=1),
-    axis.text.y = element_text(size=12))+
-    guides(fill = guide_legend(ncol = 1, title = "Catagorical\ngrouping"))    
+    axis.text.y = element_text(size=16, colour="black"))+
+    guides(fill = guide_legend(ncol = 1, title = "Catagorical\ngrouping"), size=16)    
 
+#saves plot individually, remove the geom_text which imprints "B" first
 png("Box_Plot.png",
     width = 900,
     height = 450)
 grid.arrange(Box)
 dev.off()
+
 
 ####Bitter peptide candidate linear regression##################################
 LR <-ggplot(data=top_12_t,
@@ -626,12 +636,12 @@ LR <-ggplot(data=top_12_t,
   geom_line(stat="smooth", method = "lm",
               aes(color=factor(Positions.in.Proteins),
                   alpha = peptide_MBI >= 7.3),
-            linewidth = 1)+
+            linewidth = 2)+
   scale_alpha_manual(values = c(0.2, 1),
                      guide = FALSE)+
   xlab("Bitterness intensity of cheese samples") +
   ylab("Log10 (normalized abundance)") +
-  labs(color = "Peptides") +
+  labs(color = "Bitter peptide candidates") +
    scale_color_manual(
     values = c("#88CCEE","#CC6677", "#117733", "#DDCC77", 
                "#332288", "#AA4499", "#44AA99", "#999933",
@@ -648,35 +658,37 @@ LR <-ggplot(data=top_12_t,
            "αs1 [181-190]",
            expression(bold("βA1 [60-69]*")),
            expression(bold("βA1 [60-69]"))))+
-    geom_text(x=0.5,
-            y=10,
-            size=12,
-            label="A",
-            check_overlap = TRUE)+
+
   scale_y_continuous(breaks=c(4,5,6,7,8,9,10))+
   scale_x_continuous(breaks=c(0,0.5,1,1.5,2,2.5,3,3.5))+
   theme(
     legend.justification=c(1,-0.02),
     legend.position = c(.998,0),
-    legend.text = element_text(size=12,
+    legend.text = element_text(size=16,
                                hjust=0),
-    legend.title = element_text(size=12),
-    axis.text.x = element_text(size=12))+
+    legend.title = element_text(size=16),
+    axis.text.x = element_text(size=16, colour="black"),
+    axis.text.y = element_text(size=16, colour="black"),
+    axis.title.x = element_text(size=16),
+    axis.title.y = element_text(size=16))+
   guides(color = guide_legend(ncol = 5,
                               title.position = "top",
          override.aes = list(alpha = c(1, 0.2, 0.2, 1, 0.2, 0.2, 1, 0.2, 0.2, 0.2, 1, 1))))
-                             
+
+#saves plot individually, remove the geom_text which imprints "A" first
 png("LR.png",
     width = 900,
     height = 450)
 grid.arrange(LR)
 dev.off()
-
+#generates combined linear regression and combined box plot
 png("LR and Box plot.png",
     width = 900,
     height = 900)
 grid.arrange(LR, Box)
 dev.off()
+
+
 ####Bitter peptide candidate Volcano Plots Data Processing######################
 #loop that creates separate protein column by stripping Positions.in.proteins
 data_filtered$Protein<- NA
@@ -754,21 +766,23 @@ VCP <- ggplot(data=data_filtered,
        aes(x=logfoldchange,
            y=logpvalue)) +
   theme_bw()+
-  xlab(NULL)+
-  ylab(NULL)+
   xlim(-7.5, 7.5) +
   ylim(-0.1,4.05) +
   geom_hline(yintercept = 1.3,
              linetype= 4,
              col = 'red')+
-  geom_richtext(x=8,
+  theme(
+    legend.position="none",
+    axis.text.x = element_text(size=16, color = "black"),
+    axis.text.y = element_text(size=16, color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),)+
+  geom_richtext(x=-8,
             y=4,
-            size=4,
-            #label=paste0(abc_list[counter],") ",protein_list[counter],"-casein"),
+            size=5,
             label=paste0(protein_list[counter],"-casein"),
             vjust = "inward", 
-            hjust = "inward",
-            fontface=2)+
+            hjust = "inward")+
   geom_point(aes(color=factor(Protein)),
              size = ifelse(1:nrow(data_filtered) <= 12, 3.5, 1.5),
              alpha = ifelse(data_filtered$Protein == Pro_highlighted, 1, 0))+
@@ -780,17 +794,15 @@ VCP <- ggplot(data=data_filtered,
                αs2="#517fab",
                κ="#0d0404",
                other="#7F7F7F"))+
-  theme(legend.position="none")+
   #code for top 5 bitter peptide candidates(bold fontface)
     geom_text(
     data = subset(data_filtered,
                   data_filtered$Positions.in.Proteins %in% grp_top_5 & data_filtered$Protein %in% Pro_highlighted),
-#    aes(label = paste0(ROM_order,") ",Positions.in.Proteins)),
     aes(label = ROM_order),    direction = "both",
     color = "black",
     nudge_x =.4,
     nudge_y = .2,
-    size = 4,
+    size = 5,
     fontface = "bold",
     box.padding = unit(.5, "lines"),
     point.padding = unit(.5, "lines"))+
@@ -801,16 +813,11 @@ VCP <- ggplot(data=data_filtered,
                   data_filtered$Positions.in.Proteins %in% grp_top_12 & 
                     data_filtered$Protein %in% Pro_highlighted &
                     !(data_filtered$Positions.in.Proteins %in% grp_top_5)),
-#    aes(label = paste0(ROM_order,") ",Positions.in.Proteins)),
     aes(label = ROM_order),
-    
-#    vjust = "outward", 
-#    hjust = "inward",           
-    direction = "both",
     color = "black",
     nudge_x =.3,
     nudge_y = .2,
-    size = 4,
+    size = 5,
     fontface = "plain",
     box.padding = unit(.5, "lines"),
     point.padding = unit(.5, "lines"))
@@ -819,13 +826,14 @@ assign(str_c("VCP_", protein_list[counter]),VCP)
 print(str_c("VCP_", protein_list[counter]))
 }
 
+
 #####creates plot for extracting legend from of fold change for combined volcano plot####
 VCP_legend<-ggplot(data = data_filtered,
             aes(x=logfoldchange,
                 y=logpvalue))+
  
-  theme(legend.text = element_text(size=12),
-    legend.title = element_text(size=12, face=2))+
+  theme(legend.text = element_text(size=16),
+    legend.title = element_text(size=16))+#, face=2))+
   ####################protein legend
   geom_point(aes(colour = factor(Protein)))+
   ####################protein legend
@@ -836,7 +844,7 @@ VCP_legend<-ggplot(data = data_filtered,
              βA1="#f06625",
              βA2="yellow2",
              αs1="#baccdd",
-             αs2="#517fab", ##517fab
+             αs2="#517fab",
              κ="#0d0404",
              other="#481567FF"),
     labels=c("κ-casein",
@@ -899,6 +907,7 @@ VCP_legend<-ggplot(data = data_filtered,
   theme(legend.key=element_rect(fill="white",
                                 color = "white"))+
   guides(colour=guide_legend(title = "Bitter peptide\ncandidates",
+                             size=16,
                              override.aes=list(color="white"),
                              label.hjust	= 0,
                              label.position = "left"))  
@@ -912,24 +921,18 @@ legend <- get_legend(VCP_legend + theme(legend.position = "right"))
 combined_VCP<-grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2)
 #, left=paste("-Log(p-value)"), bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
 
+# Save plot to file with modified labels
 png("Volcano_Plot_2x_Combined.png",
     width = 1000,
     height = 1000)
 grid.arrange(VCP_one, combined_VCP,
-             nrow=2,
-             right=legend,
-             left="-Log(p-value)", 
-             bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
+    nrow=2,
+    right=legend,
+    left="-Log(p-value)", 
+    bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)",
+    top=" ")
 dev.off()
 
-# Save plot to file with modified labels
-png("Volcano_Plot_2x_Combined.png", width = 1000, height = 1000)
-grid.arrange(VCP_one, combined_VCP,
-             nrow=2,
-             right=legend,
-             left="-Log(p-value)",
-             bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
-dev.off()
 ####################Combined Volcano Plot#######################################
 #creates a list of labels to highlight the selected bitter peptides
 ROM_order_list <- c(expression(bold("1")),
@@ -957,9 +960,9 @@ VCP_one<-ggplot(data=data_filtered,
   labs(color = "Peptide's origin") +
   ylim(-0.1,4) +
   geom_point(aes(colour=Protein))+
-  geom_text(x=-12.25,
+  geom_text(x=-12.1,
             y=1.4,
-            size=4.5,
+            size=5,
             label="P-value > 0.05",
             check_overlap = TRUE,
             col = "red")+
@@ -970,14 +973,12 @@ VCP_one<-ggplot(data=data_filtered,
     legend.justification=c(1,-0.02),
     #legend.position = c(.998,0),
     legend.position = "none",
-    legend.text = element_text(size=12),
-    legend.title = element_text(size=12),
-    axis.text.x = element_text(size=12),
-    axis.text.y = element_text(size=12),
-    axis.title.x = element_blank(),#element_text(size=12))+
-    axis.title.y = element_blank())+#element_text(size=12))+
-    
-  #theme(legend.text = element_markdown())+
+    legend.text = element_text(size=16),
+    legend.title = element_text(16),
+    axis.text.x = element_text(size=16, color = "black"),
+    axis.text.y = element_text(size=16, color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank())+
   ####################protein legend
   geom_point(aes(colour = Protein),
              size = ifelse(1:nrow(data_filtered) <= 12, 3.5, 1.5))+
@@ -986,7 +987,7 @@ VCP_one<-ggplot(data=data_filtered,
              βA1="#f06625",
              βA2="yellow2",
              αs1="#baccdd",
-             αs2="#517fab", ##517fab
+             αs2="#517fab", 
              κ="#0d0404",
              other="#481567FF"))+
   #################Top_12 legend
@@ -1028,22 +1029,21 @@ VCP_one<-ggplot(data=data_filtered,
                              override.aes=list(color="white"),
                              label.hjust	= 0,
                              label.position = "left"))+
-  geom_text_repel(
+  geom_text(
     data = subset(data_filtered,
                   data_filtered$Positions.in.Proteins %in% grp_top_12),
     label = ROM_order_list,
-    direction = "both",
+    col="black",
     nudge_x =.1,
     nudge_y = .1,
-    size = 4)#,
-   # box.padding = unit(.5, "lines"),
-    #point.padding = unit(.5, "lines"))
+    size = 5)#,
 
-png("Volcano_Plot.png",
-    width = 1000,
-    height = 500)
-grid.arrange(VCP_one)
-dev.off()
+#saves individual volcano plot
+# png("Volcano_Plot.png",
+#     width = 1000,
+#     height = 500)
+# grid.arrange(VCP_one)
+# dev.off()
 
 ########################beta heat map abundance#################################
 #subsets all beta-casein into separate dataframe
@@ -1406,7 +1406,8 @@ merged_mh <-t(merged_mh)
 write.csv(merged_mh, "merged_dataframe_heatmap_kapa_casein.csv")
 
 
-########################summary of heat maps##e#################################
+########################summary of heat maps####################################
+#calculates the number of peptides in data associated with each casein
 dim(data_filtered_as1)[1]
       #[1] 166
 dim(data_filtered_as2)[1]
@@ -1416,4 +1417,11 @@ dim(data_filtered_beta)[1]
 dim(data_filtered_kapa)[1]
       #[1] 35
 166+112+533+35
-      #[1] 846
+      #[1] 846 = total number of peptides from casein
+dim(data_filtered)[1]
+      #[1] 872 = total number of peptides from all proteins
+846/872*100
+      #[1] 97.02% of peptides have casein origins
+
+
+
