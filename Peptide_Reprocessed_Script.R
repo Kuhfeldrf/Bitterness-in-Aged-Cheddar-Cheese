@@ -34,12 +34,15 @@ library(matrixTests)
     # lit_ref = literature reference database,
     # datarn = instrument data with new names
     # and renames columns
-# #Imports literature reference database
+#Imports literature reference database
 lit_ref <- read.csv("Supplemental_Information_CSV_Database.csv", 
                     header = TRUE, 
                     stringsAsFactors = FALSE, 
                     fileEncoding = "latin1", 
                     comment.char = '#')	
+
+#Imports sensory raw data
+sensory_data <- read.csv("Sensory_Raw_Data.csv",header = TRUE)
 
 #Imports peptide data list
 data1 <- read.table("Kuhfeld_Bitter_Peptide_Reprocess-(1)_PeptideGroups.txt",
@@ -404,8 +407,17 @@ mean(cor_bitter, na.rm = TRUE)
 cor(cor_age,cor_bitter)
       #[1] 0.976
 #age and bitterness are  correlated as seen above(r = 0.975, p-value = 4e-12)
-
-
+cor.test(samdf$age,samdf$MBI)
+# Pearson's product-moment correlation
+# 
+# data:  samdf$age and samdf$MBI
+# t = 8.0879, df = 12, p-value = 3.362e-06
+# alternative hypothesis: true correlation is not equal to 0
+# 95 percent confidence interval:
+#  0.7586811 0.9745154
+# sample estimates:
+#       cor 
+#0.9192323 
 #####generates bitter peptide candidates list###################################
 #removes bulky extra columns
 A_sample_list <-paste0("A.",samdf$sample_names)
@@ -1492,8 +1504,8 @@ comp_data <- data.frame(
   salt = c(1.86216311374037,1.71567469161994,1.74879206283686,1.73881836564534,1.69876757383512,1.58857638605862,1.72132082742909,1.66203644220724,1.78544061063162,1.74861523286485,1.63197600028366,1.80180196225787,1.82410847495797,1.66928014048674),
   fat = c(34.6728883435417,33.5302619210835,32.3940242097205,32.5075851439027,37.225486314761,36.5110481091105,34.8459101748712,37.5912266616767,38.173462894951,37.2616500566183,35.0667842934753,34.5340767363412,37.4479236157211,32.3942865618574),
   FDB = c(53.5874663176067,51.9736861087379,50.322506591679,50.3565810282602,55.3710590004749,54.3085881553061,52.4426230854673,55.8817389011088,56.9663720478094,57.720480164773,52.598661742761,50.9272628866911,58.0519104991098,47.8679189410715),
-  comp_protein = c(24.0367851043452,24.1509180943884,24.2914190081191,24.099011570933,25.1863515099394,24.6868337586952,24.2850167191752,24.4526655769573,24.4450783781938,24.3132001203731,24.5128098279538,24.4527510256775,24.6840737215369,24.0617403049695))
-
+  comp_protein = c(24.0367851043452,24.1509180943884,24.2914190081191,24.099011570933,25.1863515099394,24.6868337586952,24.2850167191752,24.4526655769573,24.4450783781938,24.3132001203731,24.5128098279538,24.4527510256775,24.6840737215369,24.0617403049695),
+  salt_in_moisture = c(5.27575097220135,4.83478214130370,4.90859171650480,4.90565119126859,5.18377464233873,4.84748681445692,5.12996829695796,5.07790516152526,5.41215164013276,4.93336668474341,4.89620999573673,5.59749894621333,5.13944133862270,5.16394370090485))
 # Get the names of the variables excluding the 'group' column
 variable_names <- colnames(comp_data)[-1]
 
@@ -1529,6 +1541,7 @@ print(anova_table)
 # 4          fat 6.1670468 0.01210110
 # 5          FDB 2.6881685 0.10303056
 # 6 comp_protein 2.8661146 0.09017866
+# 7 salt_in_moisture 0.6350800 0.60920375
 
 #critical F-value @ 95 CI for 14 obs. 
 qf(.95, 3, 10)
@@ -1557,4 +1570,79 @@ print(moisture_tukey)
 # T-L  2.4317039 -0.1211471 4.984555 0.0629493
 # T-M  1.7421444 -0.8107065 4.294995 0.2214648
 
+#Calculate the correlation and correlation test for each variable in comp_data
+cor_results <- list()
+cor_test_results <- list()
 
+for (variable in colnames(comp_data)[-1]) {
+  cor_age <- cor(comp_data[[variable]], samdf$age)
+  cor_bitter <- cor(comp_data[[variable]], samdf$MBI)
+  cor_age_test <- cor.test(comp_data[[variable]], samdf$age)$p.value
+  cor_bitter_test <- cor.test(comp_data[[variable]], samdf$MBI)$p.value
+  
+  cor_results[[variable]] <- c(cor_age, cor_bitter)
+  cor_test_results[[variable]] <- c(cor_age_test, cor_bitter_test)
+}
+
+#Combine the results into a data frame
+cor_df <- data.frame(
+  variable = names(cor_results),
+  cor_bitter = round(sapply(cor_results, "[", 2), 2),
+  cor_bitter_pvalue = round(sapply(cor_test_results, "[", 2), 3),
+  cor_age = round(sapply(cor_results, "[", 1), 2),                          
+  cor_age_pvalue = round(sapply(cor_test_results, "[", 1), 3)
+)
+
+head(cor_df, n=10)
+    # variable                          cor_bitter cor_bitter_pvalue cor_age cor_age_pvalue
+    # moisture                 moisture      -0.50             0.069   -0.69          0.006
+    # ph                             ph      -0.19             0.511   -0.24          0.413
+    # salt                         salt      -0.09             0.764   -0.17          0.550
+    # fat                           fat       0.30             0.291    0.34          0.232
+    # FDB                           FDB       0.14             0.621    0.11          0.713
+    # comp_protein         comp_protein       0.16             0.578    0.18          0.527
+    # salt_in_moisture salt_in_moisture       0.38             0.183    0.48          0.086
+
+
+
+########################Analysis of sensory data################################
+#Calculate correlation and correlation test for each sensory_data variable with age and bitterness
+sen_cor_results <- lapply(sensory_data[, -1], function(sensory_var) {
+cor_age <- cor(samdf$age, sensory_var)
+cor_bitter <- cor(samdf$MBI, sensory_var)
+c(cor_age, cor_bitter)
+})
+
+sen_cor_test_results <- lapply(sensory_data[, -1], function(sensory_var) {
+cor_age_test <- cor.test(samdf$age, sensory_var)$p.value
+cor_bitter_test <- cor.test(samdf$MBI, sensory_var)$p.value
+c(cor_age_test, cor_bitter_test)
+})
+
+#Combine the results into a data frame with rounded values
+sen_cor_df <- data.frame(
+variable = names(sen_cor_results),
+cor_bitter = round(sapply(sen_cor_results, "[", 2), 2),
+cor_bitter_pvalue = round(sapply(sen_cor_test_results, "[", 2), 3),
+cor_age = round(sapply(sen_cor_results, "[", 1), 2),
+cor_age_pvalue = round(sapply(sen_cor_test_results, "[", 1), 3))
+
+sen_cor_df
+      # variable              cor_bitter cor_bitter_pvalue cor_age cor_age_pvalue
+      # Cooked         Cooked      -0.66             0.010   -0.80          0.001
+      # Caramel       Caramel       0.86             0.000    0.89          0.000
+      # Whey             Whey      -0.77             0.001   -0.85          0.000
+      # Diacetyl     Diacetyl      -0.61             0.021   -0.69          0.006
+      # Milkfat       Milkfat      -0.53             0.053   -0.56          0.038
+      # Fruity         Fruity       0.54             0.045    0.79          0.001
+      # Sulfur         Sulfur       0.82             0.000    0.92          0.000
+      # Brothy         Brothy       0.81             0.000    0.90          0.000
+      # Nutty           Nutty       0.85             0.000    0.92          0.000
+      # Catty           Catty       0.69             0.007    0.83          0.000
+      # Cowy.barny Cowy.barny       0.39             0.172    0.18          0.533
+      # Sour             Sour       0.75             0.002    0.81          0.000
+      # Bitter         Bitter       1.00             0.000    0.92          0.000
+      # Salty           Salty       0.86             0.000    0.94          0.000
+      # Sweet           Sweet       0.78             0.001    0.86          0.000
+      # Umami           Umami       0.78             0.001    0.88          0.000
+      # > 
