@@ -13,6 +13,7 @@ install.packages("dplyr")
 install.packages("stringr")
 install.packages("tidyverse")
 install.packages("ggtext")
+install.packages("matrixTests")
 
 library(gtools)
 library(dplyr)
@@ -26,7 +27,7 @@ library(ggnewscale)
 library(tidyverse)
 library(ggtext)
 library(cowplot)
-
+library(matrixTests)
 
 ####Import raw data, creates important data frames############################## 
     # samdf = sample information,
@@ -310,6 +311,8 @@ nrow(data_filtered) == n_distinct(data_filtered$combined_sequence)
 ####Calculates linear correlations##############################################
 cor.results_A <- c()
 cor.results_B <- c()
+cor.test_B <- c()
+
 sample_list_ANI <-paste0("ANI.",samdf$sample_names) #list of sample names used in correlation
 #loop that calculates linear regression of instrument intensity to age and bitterness, generates plots for each peptide
 pdf("Bar,box, and scatter plot of individual peptides.pdf",height=8,width=12)
@@ -319,12 +322,16 @@ for (i in 1:nrow(data_filtered)) {
   data_cor <- data.frame(b=samdf$MBI,
                          age=samdf$age,
                          grp=factor(samdf$grouping,
-                                    levels=c("Threshold", "Low", "Moderate", "Extreme"))
-                         ,a=c(unlist(data_filtered[i,sample_list_ANI])) )
+                                    levels=c("Threshold", "Low", "Moderate", "Extreme")),
+                         a=c(unlist(data_filtered[i,sample_list_ANI])) )
   #correlates instrumental data to bitterness
   cor_B <- cor(data_cor[,c("a","b")])[2,1] 
   #saves data from above
   cor.results_B <-rbind(cor.results_B,c(data_filtered[i,1],cor_B)) 
+  #p-value of correlation
+  cor_B_test <- cor.test(data_cor$a, data_cor$b)$p.value
+  #saves data from above
+  cor.test_B <- rbind(cor.test_B, c(data_filtered[i, 1], cor_B_test)) 
   #correlates instrumental data to age
   cor_A <- cor(data_cor[,c("a","age")])[2,1] 
   #saves data from above
@@ -372,8 +379,7 @@ dev.off()
 #combines peptide, corr_age, and Corr_bitterness into one table  
 data_filtered$Corr_age<-as.numeric(cor.results_A[,2])
 data_filtered$Corr_bitter<-as.numeric(cor.results_B[,2])
-
-
+data_filtered$Corr_pvalue<-as.numeric(cor.test_B[,2])
 ####compares linear relationship of age and bitterness to peptide abundance#####
 #age and bitterness are highly correlated as seen below
 cor_age=c(unlist(data_filtered[ ,'Corr_age']))
@@ -437,8 +443,6 @@ data_filtered$ROM_order <- order(data_filtered$ROM, decreasing = FALSE)
 #matches peptide list against literature reference database
 #renames so columns share names across dataframes
 colnames(lit_ref)[colnames(lit_ref) == 'Peptide.sequence'] <- 'combined_sequence' 
-nrow(lit_ref)
-    #[1] 235, number of peptides in literature reference database
 
 #creates dataframe with only important information to merge with data_filtered
 lit_ref_short <- subset(lit_ref,
@@ -478,7 +482,8 @@ data_filtered_final <- data_filtered_final[,c("combined_sequence",
                                               "Mean.Bitterness.Intensity..1.15.",
                                               "Literature.reference",
                                               "start_position",
-                                              "stop_position")]
+                                              "stop_position",
+                                              "Corr_pvalue")]
 
 #generates dataframe of instrumental results with lit reference database
 lit_ref_final <-subset(data_filtered_final, data_filtered_final$Groups >= 1)
@@ -491,6 +496,60 @@ write.csv(data_filtered_final, "data_filtered_final.csv")
 write.csv(lit_ref_final, "lit_ref_final.csv")
 
 options(scipen = -1, digits = 2); View(data_filtered_final)
+
+
+####examines significance and count  of Corr_bitter and stand diff mean#########
+
+
+##Corr_bitter and pValue
+# Filter the data based on the conditions
+filtered_data <- data_filtered_final[data_filtered_final$Corr_pvalue < 0.05 & data_filtered_final$Corr_bitter > 0, ]
+
+# Count the number of data points
+count <- nrow(filtered_data)
+
+# Find the minimum Corr_bitter value
+min_corr_bitter <- min(filtered_data$Corr_bitter)
+
+# Print the results
+cat("Count of data points with corr_pvalue < 0.05 and Corr_bitter > 0:", count, "\n")
+#Count of data points with corr_pvalue < 0.05 and Corr_bitter > 0: 75 
+cat("Minimum Corr_bitter value:", min_corr_bitter, "\n")
+#Minimum Corr_bitter value: 0.5326988 
+
+
+##stand_mean_diff
+# Count data points with stand_diff_mean > 2.0 (huge difference)
+count_huge_difference <- sum(data_filtered_final$stand_diff_mean > 2.0)
+
+# Count data points with stand_diff_mean > 1.2 (very large difference)
+count_very_large_difference <- sum(data_filtered_final$stand_diff_mean > 1.2)
+
+# Count data points with stand_diff_mean > 0.8 (large difference)
+count_large_difference <- sum(data_filtered_final$stand_diff_mean > 0.8)
+
+# Print the results
+cat("Count of data points with stand_diff_mean > 2.0 (huge difference):", count_huge_difference, "\n")
+#Count of data points with stand_diff_mean > 2.0 (huge difference): 14 
+
+cat("Count of data points with stand_diff_mean > 1.2 (very large difference):", count_very_large_difference, "\n")
+#Count of data points with stand_diff_mean > 1.2 (very large difference): 65 
+
+cat("Count of data points with stand_diff_mean > 0.8 (large difference):", count_large_difference, "\n")
+#Count of data points with stand_diff_mean > 0.8 (large difference): 134 
+
+
+##stand_mean_diff and Corr_Bit
+# Filter the data based on the conditions
+filtered_data <- data_filtered_final[data_filtered_final$Corr_pvalue < 0.05 &
+                                       data_filtered_final$Corr_bitter > 0 &
+                                       data_filtered_final$stand_diff_mean > 1.2, ]
+
+# Count the number of data points
+count <- nrow(filtered_data)
+# Print the result
+cat("Count of data points with corr_pvalue < 0.05, Corr_bitter > 0, and stand_diff_mean > 1.2:", count, "\n")
+#Count of data points with corr_pvalue < 0.05, Corr_bitter > 0, and stand_diff_mean > 1.2: 41 
 
 
 ####short list of bitter peptide candidates#####################################
@@ -838,7 +897,7 @@ VCP_legend<-ggplot(data = data_filtered,
   geom_point(aes(colour = factor(Protein)))+
   ####################protein legend
   geom_point(aes(colour = Protein))+
-    labs(color = "Peptide's origin") +
+    labs(color = "Peptide origin") +
   scale_color_manual(
     values=c(β="#950a11",
              βA1="#f06625",
@@ -1423,5 +1482,79 @@ dim(data_filtered)[1]
 846/872*100
       #[1] 97.02% of peptides have casein origins
 
+
+########################Analysis of compositional data##########################
+# Input the data
+comp_data <- data.frame(
+  group = c(rep("T", 4), rep("L", 3), rep("M", 3), rep("E", 4)),
+  moisture = c(35.2966454169721,35.4860806852675,35.6271648537536,35.4452099802816,32.7708608310315,32.7711337206926,33.5542195933224,32.7307499714708,32.9894786648628,35.4446637480344,33.3314135158555,32.1894113705333,35.4923493580881,32.325684344588),
+  ph = c(5.1,5.06,5.1,5.1,5.06,5.14,4.99,5.24,5.03,5.1,5.12,4.98,5.1,4.98),
+  salt = c(1.86216311374037,1.71567469161994,1.74879206283686,1.73881836564534,1.69876757383512,1.58857638605862,1.72132082742909,1.66203644220724,1.78544061063162,1.74861523286485,1.63197600028366,1.80180196225787,1.82410847495797,1.66928014048674),
+  fat = c(34.6728883435417,33.5302619210835,32.3940242097205,32.5075851439027,37.225486314761,36.5110481091105,34.8459101748712,37.5912266616767,38.173462894951,37.2616500566183,35.0667842934753,34.5340767363412,37.4479236157211,32.3942865618574),
+  FDB = c(53.5874663176067,51.9736861087379,50.322506591679,50.3565810282602,55.3710590004749,54.3085881553061,52.4426230854673,55.8817389011088,56.9663720478094,57.720480164773,52.598661742761,50.9272628866911,58.0519104991098,47.8679189410715),
+  comp_protein = c(24.0367851043452,24.1509180943884,24.2914190081191,24.099011570933,25.1863515099394,24.6868337586952,24.2850167191752,24.4526655769573,24.4450783781938,24.3132001203731,24.5128098279538,24.4527510256775,24.6840737215369,24.0617403049695))
+
+# Get the names of the variables excluding the 'group' column
+variable_names <- colnames(comp_data)[-1]
+
+# Perform one-way ANOVA for each variable and store results in a list
+anova_results <- lapply(comp_data[, -1], function(variable) {
+  aov(variable ~ comp_data$group)
+})
+
+# Initialize an empty data frame to store the results
+anova_table <- data.frame(Variable = character(),
+                          F_value = numeric(),
+                          P_value = numeric())
+
+# Iterate through the ANOVA results and extract the F value and p-value
+for (i in seq_along(anova_results)) {
+  anova_summary <- summary(anova_results[[i]])
+  
+  F_value <- anova_summary[[1]]$'F value'[1]
+  P_value <- anova_summary[[1]]$'Pr(>F)'[1]
+  
+  # Add the results to the anova_table data frame
+  anova_table <- rbind(anova_table, data.frame(Variable = variable_names[i],
+                                               F_value = F_value,
+                                               P_value = P_value))
+}
+
+# Print the table
+print(anova_table)
+# Variable   F_value    P_value
+# 1     moisture 3.7316832 0.04923063
+# 2           ph 0.7462235 0.54878995
+# 3         salt 0.9296016 0.46180794
+# 4          fat 6.1670468 0.01210110
+# 5          FDB 2.6881685 0.10303056
+# 6 comp_protein 2.8661146 0.09017866
+
+#critical F-value @ 95 CI for 14 obs. 
+qf(.95, 3, 10)
+#[1] 3.708265
+
+# Perform one-way ANOVA for the moisture variable
+moisture_anova <- aov(moisture ~ group, data = comp_data)
+
+# Perform Tukey's HSD test for the moisture variable
+moisture_tukey <- TukeyHSD(moisture_anova)
+
+# Print the Tukey's HSD test results for the moisture variable
+print(moisture_tukey)
+# Tukey's HSD test results for the moisture variable:
+#   Tukey multiple comparisons of means
+#     95% family-wise confidence level
+# 
+# Fit: aov(formula = moisture ~ group, data = comp_data)
+# 
+# $group
+# diff        lwr      upr     p adj
+# L-E -0.3026433 -2.8554942 2.250208 0.9827429
+# M-E  0.3869161 -2.1659348 2.939767 0.9653312
+# T-E  2.1290606 -0.2344201 4.492541 0.0807831
+# M-L  0.6895594 -2.0395530 3.418672 0.8648432
+# T-L  2.4317039 -0.1211471 4.984555 0.0629493
+# T-M  1.7421444 -0.8107065 4.294995 0.2214648
 
 
