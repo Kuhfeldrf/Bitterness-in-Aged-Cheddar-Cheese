@@ -107,8 +107,8 @@ YQQKPVAL,Kappa: (43-50),946,8,1454,500,-,-,"Ca, E, PR, Fr, B","Sebald et al., 20
 ARHPHPHLSFM,Kappa: (96-106),1330,11,1328,30,-,-,"Fr, S","Sebald et al., 2018, 2020",2
 AIPPKKNQDKTEIPTIN,Kappa: (107-123),1907,17,1403,280,-,-,"Fr, B","Sebald et al., 2020",2
 AIPPKKNQDKTEIPTINTIASGEPT,Kappa: (107-131),2664,25,1266,290,-,-,"Ca, Gu, Fr","Sebald et al., 2018, 2020",2
-LPQE,Alphas1: (11-14),486,4,1373,"600-6,000",3.2-2.2,-,"Gu, EDC","Lee et al., 1996; Toelstede & Hofmann, 2008a,b; ",2
-DIKQM,Alphas1: (56-60),634,5,1242,"60-6,000",4.2-2.2,-,Gu,"Toelstede & Hofmann, 2008a,b; Sebald et al., 2018, 2020",2
+LPQE,Alphas1: (11-14),486,4,1373,"600-6,000",3.2-2.2,-,"Gu, EDC","Lee et al., 1996; Toelstede & Hofmann, 2008a,b; ",3
+DIKQM,Alphas1: (56-60),634,5,1242,"60-6,000",4.2-2.2,-,Gu,"Toelstede & Hofmann, 2008a,b; Sebald et al., 2018, 2020",3
 EIVPNS[phos]VEQK1,Alphas1: (70-79),1222,10,1150,">1,200",>2.9,-,"E, Gu, PR, Fr","Sebald et al., 2018, 2020",3
 IVPN,"Alphas1: (71-74, 111-114)",442,4,1818,">4,000",>2.4,-,Gu,"Toelstede & Hofmann, 2008a",3
 SITRINK,Beta: (22-28),831,7,1234,">6,000",>2.2,-,Gu,"Toelstede & Hofmann, 2008a",3
@@ -234,15 +234,15 @@ YYG,LAFN: (542-544),401,3,1913,631,Syn,-,Syn,"Ishibashi et al., 1987b; Soltani e
 YGY,LAFN: (543-545),401,3,1913,794,Syn,-,Syn,"Ishibashi et al., 1987b; Soltani et al., 2013; Kim & Li-Chan, 2006",5
 LGG,LAFN: (670-672),245,3,807,100000,Syn,-,Syn,"Ishibashi et al., 1987a; Soltani et al., 2013; Kim & Li-Chan, 2006",5
 GRP,LAFN: (672-674),328,3,1117,794,Syn,-,Syn,"Otagiri et al., 1985; Soltani et al., 2013; Kim & Li-Chan, 2006",5
-#[phos] = phosphorylation of serine.,,,,,,
-#"Position in Protein: Casein (bovine) variants are Alphas1, Alphas2, Beta, Kappa and Beta:A2. A2 is a genetic variant in which His67 is substituted by Pro67. Beta:G is a genetic variant in which Leu137 is substituted by Pro137. Unless stated otherwise Beta-casein is of the A1 variant. LACB = Beta-Lactoglobulin; ALBU = Albumin, LALB = alpha-lactalbumin; IGHG = immunoglobulin heavy constant gamma; LAFN = lactoferrin; LAPE= lactoperoxidase",,,,,,,,,,,
-#Peptide length is designated in number of amino acid residues.,,,,,,,,,,,
-#"Hydrophobicity: Q-value denotes the average hydrophobicity of a peptide (Ney, 1979).",,,,,,,,,,,
-#T = bitterness threshold values (mol/L),,,,,,,,,,,
-#"Sourece of peptides: EDC = enzymatic digestion of casein or cheese, Syn = synthetic peptide with milk protein alignment, Ch = Cheddar, Gu = Gouda, Ca = camembert, PR = Parmigiano Reggiano, Fr = Fresh, E = Emmentaler, B = Buffalo, S = Sheep, Go = Goat",,,,,,,,,,,
-#"Literature reference includes first primary literature source, the review article by (Lemieux & Simard, 1992), and bitterness prediction models by  (Soltani et al., 2013; Kim & Li-Chan, 2006).",,,,,,,,,,,
-#"Group I: physical properties and amino acid composition of qualitatively determined bitter peptides identified from different sources",,,,,,,,,,,
-#"Group II: Physical properties, bitterness threshold values and amino acid composition of quantitatively determined bitter peptides identified from different sources",,,,,,,,,,,
-#"Group III: Physical properties, bitterness values and amino acid composition of peptides determined to be none bitter or have indeterminable bitterness threshold values (group III) identified from different sources",,,,,,,,,,,
-#"Group IV: Physical properties, bitterness threshold values and amino acid composition of bitter di-peptides identified from different sources",,,,,,,,,,,
-#"Group V: Physical properties, bitterness threshold values and amino acid composition of bitter peptides with whey protein",,,,,,,,,,,
+#[phos] = phosphorylation of serine.
+#Position in Protein: Casein (bovine) variants are Alphas1"," Alphas2"," Beta, Kappa and Beta:A2. A2 is a genetic variant in which His67 is substituted by Pro67. Beta:G is a genetic variant in which Leu137 is substituted by Pro137. Unless stated otherwise Beta-casein is of the A1 variant. LACB = Beta-Lactoglobulin; ALBU = Albumin," LALB = alpha-lactalbumin; IGHG = immunoglobulin heavy constant gamma; LAFN = lactoferrin; LAPE= lactoperoxidase.
+#Peptide length is designated in number of amino acid residues.
+#Hydrophobicity: Q-value denotes the average hydrophobicity of a peptide (Ney"," 1979).
+#T = bitterness threshold values (mol/L).
+#Sourece of peptides: EDC = enzymatic digestion of casein or cheese"," Syn = synthetic peptide with milk protein alignment"," Ch = Cheddar"," Gu = Gouda"," Ca = camembert"," PR = Parmigiano Reggiano"," Fr = Fresh"," E = Emmentaler"," B = Buffalo"," S = Sheep"," Go = Goat.
+#Literature reference includes first primary literature source","the review article by (Lemieux & Simard"," 1992)"," and bitterness prediction models by  (Soltani et al."," 2013; Kim & Li-Chan"," 2006).
+#Group I: physical properties and amino acid composition of qualitatively determined bitter peptides identified from different sources.
+#Group II: Physical properties"," bitterness threshold values and amino acid composition of quantitatively determined bitter peptides identified from different sources.
+#Group III: Physical properties"," bitterness values and amino acid composition of peptides determined to be none bitter or have indeterminable bitterness threshold values (group III) identified from different sources.
+#Group IV: Physical properties"," bitterness threshold values and amino acid composition of bitter di-peptides identified from different sources.
+#Group V: Physical properties"," bitterness threshold values and amino acid composition of bitter peptides with whey protein.
