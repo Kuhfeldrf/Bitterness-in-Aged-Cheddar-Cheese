@@ -515,18 +515,13 @@ options(scipen = -1, digits = 2); View(data_filtered_final)
 
 ##Corr_bitter and pValue
 # Filter the data based on the conditions
-filtered_data <- data_filtered_final[data_filtered_final$Corr_pvalue < 0.05 & data_filtered_final$Corr_bitter > 0, ]
+p_r_data <- data_filtered_final[data_filtered_final$Corr_pvalue < 0.05 & data_filtered_final$Corr_bitter > 0, ]
 
-# Count the number of data points
-count <- nrow(filtered_data)
+# Count the number of data points and Print the result
+cat("Count of data points with corr_pvalue < 0.05 and Corr_bitter > 0:", nrow(p_r_data), "\n")
 
-# Find the minimum Corr_bitter value
-min_corr_bitter <- min(filtered_data$Corr_bitter)
-
-# Print the results
-cat("Count of data points with corr_pvalue < 0.05 and Corr_bitter > 0:", count, "\n")
 #Count of data points with corr_pvalue < 0.05 and Corr_bitter > 0: 75 
-cat("Minimum Corr_bitter value:", min_corr_bitter, "\n")
+cat("Minimum Corr_bitter value:", min(p_r_data$Corr_bitter), "\n")
 #Minimum Corr_bitter value: 0.5326988 
 
 
@@ -540,29 +535,58 @@ count_very_large_difference <- sum(data_filtered_final$stand_diff_mean > 1.2)
 # Count data points with stand_diff_mean > 0.8 (large difference)
 count_large_difference <- sum(data_filtered_final$stand_diff_mean > 0.8)
 
+# Count data points with stand_diff_mean > 0.5 (medium-small difference)
+count_medium_mall_difference <- sum(data_filtered_final$stand_diff_mean > 0.5)
+
 # Print the results
 cat("Count of data points with stand_diff_mean > 2.0 (huge difference):", count_huge_difference, "\n")
-#Count of data points with stand_diff_mean > 2.0 (huge difference): 14 
+    #Count of data points with stand_diff_mean > 2.0 (huge difference): 14 
 
 cat("Count of data points with stand_diff_mean > 1.2 (very large difference):", count_very_large_difference, "\n")
-#Count of data points with stand_diff_mean > 1.2 (very large difference): 65 
+      #Count of data points with stand_diff_mean > 1.2 (very large difference): 65 
 
 cat("Count of data points with stand_diff_mean > 0.8 (large difference):", count_large_difference, "\n")
-#Count of data points with stand_diff_mean > 0.8 (large difference): 134 
+      #Count of data points with stand_diff_mean > 0.8 (large difference): 134 
+
+cat("Count of data points with stand_diff_mean > 0.5 (medium-small difference):", count_medium_mall_difference, "\n")
+      #Count of data points with stand_diff_mean > 0.5 (medium-small difference): 234 
 
 
 ##stand_mean_diff and Corr_Bit
 # Filter the data based on the conditions
-filtered_data <- data_filtered_final[data_filtered_final$Corr_pvalue < 0.05 &
-                                       data_filtered_final$Corr_bitter > 0 &
+p_r_smd_data <- data_filtered_final[data_filtered_final$Corr_pvalue < 0.05 &
+                                       data_filtered_final$Corr_bitter > 0.5 &
                                        data_filtered_final$stand_diff_mean > 1.2, ]
 
-# Count the number of data points
-count <- nrow(filtered_data)
-# Print the result
-cat("Count of data points with corr_pvalue < 0.05, Corr_bitter > 0, and stand_diff_mean > 1.2:", count, "\n")
-#Count of data points with corr_pvalue < 0.05, Corr_bitter > 0, and stand_diff_mean > 1.2: 41 
+#examines peptides that overlpa with 60-68 region of beta casein
+b_67_p_r_smd_data <- subset(p_r_smd_data, grepl("β", Positions.in.Proteins) & (start_position >= 55 & stop_position <= 75))
+b_67_p_r_smd_data_subset <- b_67_p_r_smd_data[, c("combined_sequence", 
+                                                  "Positions.in.Proteins",
+                                                  "ROM_order",
+                                                  "stand_diff_mean",
+                                                  "Corr_bitter",
+                                                  "Corr_pvalue",
+                                                  "Bitterness.Threshold.value..umol.L.",
+                                                  "Mean.Bitterness.Intensity..1.15.",
+                                                  "Literature.reference")]
+head(b_67_p_r_smd_data_subset, n=11)
+#               combined_sequence Positions.in.Proteins ROM_order stand_diff_mean Corr_bitter  Corr_pvalue
+# 1                        YPFPGP             β [60-65]         1        2.880932   0.8851364 2.577595e-05 
+# 4                     YPFPGPIPN           βA2 [60-68]         4        2.100832   0.9124331 5.377868e-06
+# 11    YPFPGPIHNS1xPhospho [S10]          βA1 [60-69]*        11        2.370529   0.6960701 5.690802e-03
+# 12                   YPFPGPIHNS           βA1 [60-69]        12        2.261884   0.6617981 9.935707e-03
+# 14 SLVYPFPGPIH1xAcetyl [N-Term]          βA1 [57-67]*        14        1.725335   0.6846568 6.905161e-03
+# 16                    YPFPGPIHN           βA1 [60-68]        16        1.446505   0.7576509 1.695318e-03
+# 18               VYPFPGPIPNSLPQ           βA2 [59-72]        18        1.969971   0.6244681 1.697352e-02
+# 20                   VYPFPGPIHN           βA1 [59-68]        20        2.102901   0.6061611 2.156869e-02
+# 21                     YPFPGPIH           βA1 [60-67]        21        1.313450   0.8439459 1.476728e-04
+# 27                       FPGPIH           βA1 [62-67]        27        1.315826   0.6995039 5.360218e-03
+# 49                YPFPGPIPNSLPQ           βA2 [60-72]        49        1.218258   0.5849724 2.799312e-02
 
+                            
+# Count the number of data points and Print the result
+cat("Count of data points with corr_pvalue < 0.05, Corr_bitter > 0, and stand_diff_mean > 1.2:",  nrow(p_r_smd_data), "\n")
+#Count of data points with corr_pvalue < 0.05, Corr_bitter > 0.5, and stand_diff_mean > 1.2: 41 
 
 ####short list of bitter peptide candidates#####################################
 #selects top 12 bitter peptide candidates based on rank order mean
@@ -987,23 +1011,6 @@ VCP_legend<-ggplot(data = data_filtered,
 legend <- get_legend(VCP_legend + theme(legend.position = "right"))
 
 
-#####prints combined volcano plot################################################
-# create a combined plot of the six volcano plots
-combined_VCP<-grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2)
-#, left=paste("-Log(p-value)"), bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
-
-# Save plot to file with modified labels
-png("Volcano_Plot_2x_Combined.png",
-    width = 1000,
-    height = 1000)
-grid.arrange(VCP_one, combined_VCP,
-    nrow=2,
-    right=legend,
-    left="-Log(p-value)", 
-    bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)",
-    top=" ")
-dev.off()
-
 ####################Combined Volcano Plot#######################################
 #creates a list of labels to highlight the selected bitter peptides
 ROM_order_list <- c(expression(bold("1")),
@@ -1115,6 +1122,24 @@ VCP_one<-ggplot(data=data_filtered,
 #     height = 500)
 # grid.arrange(VCP_one)
 # dev.off()
+
+
+#####prints combined volcano plot################################################
+# create a combined plot of the six volcano plots
+combined_VCP<-grid.arrange(VCP_κ,VCP_αs1,VCP_αs2,VCP_β,VCP_βA1,VCP_βA2, ncol=3, nrow=2)
+#, left=paste("-Log(p-value)"), bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)")
+
+# Save plot to file with modified labels
+png("Volcano_Plot_2x_Combined.png",
+    width = 1000,
+    height = 1000)
+grid.arrange(VCP_one, combined_VCP,
+             nrow=2,
+             right=legend,
+             left="-Log(p-value)", 
+             bottom="Log2 Fold Change (normalized abundance of threshold & low vs. moderate & extreme bitterness sample grouping)",
+             top=" ")
+dev.off()
 
 ########################beta heat map abundance#################################
 #subsets all beta-casein into separate dataframe
